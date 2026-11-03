@@ -14,13 +14,13 @@ suffice in practice, and does a larger σ need fewer samples?
 
 | Person | Code | Overleaf |
 |---|---|---|
-| Person 1 | statistics and plots: N_all(ε), confidence intervals, log-log and semi-log plots | report setup, introduction, related work; definition of gap_in and gap_out (TA point 2), together with Person 4 |
-| Person 2 | environment: game family F1, simulator with sample counter, TV worst case (greedy); plug-in baseline and its runs; repo setup and interface | environment and baseline (TA points 1 and 3) |
-| Person 3 | Robust-Q-FTRL (`run`), TV worst case (dual form, Eq. 19); Robust-Q-FTRL runs | method section on the algorithm |
-| Person 4 | gap evaluation (`gap_product`, `gap_out`, `gap_in`), exact solver (`solve_exact`) | definition of gap_in and gap_out (TA point 2), together with Person 1 |
+| Tiago | statistics and plots: N_all(ε), confidence intervals, log-log and semi-log plots | report setup, introduction, related work; definition of gap_in and gap_out (TA point 2), together with Ali |
+| Kevin | environment: game family F1, simulator with sample counter, TV worst case (greedy); plug-in baseline and its runs; repo setup and interface | environment and baseline (TA points 1 and 3) |
+| Timon | Robust-Q-FTRL (`run`), TV worst case (dual form, Eq. 19); Robust-Q-FTRL runs | method section on the algorithm |
+| Ali | gap evaluation (`gap_product`, `gap_out`, `gap_in`), exact solver (`solve_exact`) | definition of gap_in and gap_out (TA point 2), together with Tiago |
 | anyone | game family F2, only if time allows | report and poster are written jointly |
 
-**Dependency:** the plug-in baseline needs the gap evaluation and the exact solver. Person 4 delivers
+**Dependency:** the plug-in baseline needs the gap evaluation and the exact solver. Ali delivers
 both by **Sat 7 Nov** so that baseline numbers are ready for the TA update.
 
 **Dates:** Sun 8 Nov results and Overleaf text for the update · Mon 9 Nov update to the TA ·
@@ -31,14 +31,14 @@ Tue 10 Nov project session · 21 Nov main results for C1, report without abstrac
 
 | File | Content | Owner |
 |---|---|---|
-| `src/rmg/games.py` | games, game families F1 and F2, a small toy game for tests | Person 2 (F2: anyone) |
+| `src/rmg/games.py` | games, game families F1 and F2, a small toy game for tests | Kevin (F2: anyone) |
 | `src/rmg/policies.py` | policy and mixture formats | shared |
-| `src/rmg/simulator.py` | generative model with sample counter | Person 2 |
-| `src/rmg/robust.py` | TV worst case: greedy and dual form Eq. (19) | Person 2 (greedy), Person 3 (dual) |
-| `src/rmg/evaluate.py` | exact gap evaluation: gap_product, gap_out, gap_in | Person 4 |
-| `src/rmg/plugin.py` | plug-in baseline | Person 2 |
-| `src/rmg/robust_q_ftrl.py` | Robust-Q-FTRL (Algorithm 2) and exact solver | Person 3 (`run`), Person 4 (`solve_exact`) |
-| `experiments/` | configs and experiment scripts | runs: Person 2 (baseline), Person 3 (Robust-Q-FTRL); statistics and plots: Person 1 |
+| `src/rmg/simulator.py` | generative model with sample counter | Kevin |
+| `src/rmg/robust.py` | TV worst case: greedy and dual form Eq. (19) | Kevin (greedy), Timon (dual) |
+| `src/rmg/evaluate.py` | exact gap evaluation: gap_product, gap_out, gap_in | Ali |
+| `src/rmg/plugin.py` | plug-in baseline | Kevin |
+| `src/rmg/robust_q_ftrl.py` | Robust-Q-FTRL (Algorithm 2) and exact solver | Timon (`run`), Ali (`solve_exact`) |
+| `experiments/` | configs and experiment scripts | runs: Kevin (baseline), Timon (Robust-Q-FTRL); statistics and plots: Tiago |
 | `tests/` | tests, including known-answer tests for the gap evaluation | all |
 | `results/` | raw data and plots, not in the repo | – |
 

@@ -1,3 +1,9 @@
 *.pdf
 results/
 .DS_Store
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
