@@ -42,3 +42,10 @@ def test_aggregative_same_params_for_all_n():
         game = aggregative_game(n, params)
         game.validate()
         assert game.spec.n == n and game.spec.S == 3
+
+
+def test_random_game_different_action_counts():
+    game = random_game(n=3, S=4, H=2, A=(2, 3, 2), seed=0)
+    game.validate()
+    assert game.P.shape == (2, 4, 2, 3, 2, 4)
+    assert game.R.shape == (3, 2, 4, 2, 3, 2)

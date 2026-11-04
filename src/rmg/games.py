@@ -97,7 +97,27 @@ def random_game(n: int, S: int, H: int, A: int | tuple[int, ...], seed: int, bet
         A: number of actions per agent; a single int means "the same for all".
         beta: Dirichlet concentration; small = peaked distributions, large = flat ones.
     """
-    raise NotImplementedError("Kevin: game family F1")
+    A = (A,) * n if isinstance(A, int) else tuple(A)
+    spec = GameSpec(n=n, S=S, H=H, A=A)
+    rng = np.random.default_rng(seed)
+
+    # Transitions: one Dirichlet draw per (h, s, joint action); last axis = next state.
+    P = rng.dirichlet(beta * np.ones(S), size=(H, S, *A))
+
+    # Rewards: half state quality (same for everyone), half noise (per agent and entry).
+    g = np.linspace(0.0, 1.0, S)
+    g_broadcast = g.reshape((1, 1, S) + (1,) * n)           # aligns with axis s of R
+    R = 0.5 * g_broadcast + 0.5 * rng.uniform(size=(n, H, S, *A))
+
+    game = MarkovGame(
+        spec=spec,
+        P=P,
+        R=R,
+        name=f"F1 n={n} seed={seed}",
+        meta={"family": "F1", "n": n, "S": S, "H": H, "A": A, "seed": seed, "beta": beta},
+    )
+    game.validate()
+    return game
 
 
 @dataclass

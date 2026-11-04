@@ -36,3 +36,12 @@ def test_same_seed_same_answers():
     x1, _ = GenerativeModel(toy_public_goods_game(), seed=3).sample_batch(0, s, a)
     x2, _ = GenerativeModel(toy_public_goods_game(), seed=3).sample_batch(0, s, a)
     assert np.array_equal(x1, x2)
+
+
+def test_rejects_out_of_range_queries():
+    """Negative indices would silently wrap around in numpy, so the simulator refuses them."""
+    sim = GenerativeModel(toy_public_goods_game(), seed=0)
+    for h, s, a in [(2, 0, (0, 0)), (0, -1, (0, 0)), (0, 3, (0, 0)), (0, 0, (0, 2)), (0, 0, (0,))]:
+        with pytest.raises(ValueError):
+            sim.sample(h, s, a)
+    assert sim.n_samples == 0
