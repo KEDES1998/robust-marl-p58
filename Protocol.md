@@ -5,21 +5,26 @@ member's part does, why it matters, its current status and the open points. Sect
 gives an overview of the whole project, written so that anyone can follow it without
 having read the paper in detail.
 
-Last updated: 4 Nov 2026 (state of commit `3dc00ed`).
+Last updated: 8 Nov 2026 (state of commit `5119c72` and the first plug-in sweep).
 
 ---
 
 ## 1. Kevin: environment, simulator, TV worst case (greedy), plug-in baseline
 
-### 1.1 Current status (commit `3dc00ed`, 4 Nov 2026)
+### 1.1 Current status (commit `5119c72`, 8 Nov 2026)
 
-Kevin's parts are implemented and tested:
+Kevin's parts are implemented and tested. Since Ali's gap evaluation and exact solver were
+merged (`aad764d`), the plug-in baseline runs end to end:
 
 - `games.py`: `random_game` (game family F1)
 - `simulator.py`: `GenerativeModel.sample` and `GenerativeModel.sample_batch`
 - `robust.py`: `tv_worst_case` (greedy)
-- `plugin.py`: `estimate_model`; `run_plugin` is written but calls `solve_exact`, so it only
-  runs once Ali's exact solver exists
+- `plugin.py`: `estimate_model` and `run_plugin` (now with the argument `c_alpha`, Section 1.8)
+- `experiments/run_scaling.py`: runs the methods `exact` (solver floor) and `plugin`; the method
+  `robust_q_ftrl` is wired in and starts as soon as `robust_q_ftrl.run` exists
+
+Implemented by Ali (`aad764d`): `mixed_kernel`, `robust_values`, `gap_product`, `gap_out`,
+`gap_in`, `learning_rates`, `solve_exact`.
 
 Implemented before (skeleton): `GameSpec`, `MarkovGame.validate`, `toy_public_goods_game` and
 everything in `policies.py`.
@@ -27,12 +32,14 @@ everything in `policies.py`.
 Still stubs (`NotImplementedError`):
 
 - Timon: `tv_worst_case_dual`, `robust_q_ftrl.run`
-- Ali: `mixed_kernel`, `robust_values`, `gap_product`, `gap_out`, `gap_in`, `solve_exact`
 - optional (anyone): `sample_aggregative_params`, `aggregative_game`
-- `experiments/run_scaling.py`
 
-`pytest`: 37 tests, 24 passed, 13 skipped, 0 failed. The skipped tests wait for Ali (11,
-including `test_run_plugin_counter`), Timon's dual form (1) and F2 (1).
+`pytest`: 57 tests, 55 passed, 2 skipped, 0 failed. The skipped tests wait for Timon's dual
+form (1) and F2 (1).
+
+The first plug-in sweep is done (Section 1.9). It shows two things the group has to decide on
+before the Robust-Q-FTRL runs: the learning-rate constant $c_\alpha$ (Section 1.8) and the fact
+that game family F1 becomes nearly trivial for $n \ge 6$ (Section 1.9).
 
 ### 1.2 Log
 
@@ -42,6 +49,9 @@ including `test_run_plugin_counter`), Timon's dual form (1) and F2 (1).
 | 4 Nov | `ff8833f`, `b1a7635` | data formats (`games.py`, `policies.py`, `simulator.py` skeleton), 29 tests | 4 passed, 25 skipped |
 | 4 Nov | `6c877bc` | removed empty `PLAN.md` and `CLAUDE.md` | 4 passed, 25 skipped |
 | 4 Nov | `3dc00ed` | F1, simulator, TV worst case (greedy), plug-in estimation, 8 new tests | 24 passed, 13 skipped |
+| 7–8 Nov | `97312fc`, merged as `aad764d` | Ali: gap evaluation (`gap_product`, `gap_out`, `gap_in`) and exact solver (`solve_exact`, `learning_rates`), 17 new tests | 52 passed, 2 skipped |
+| 8 Nov | `5119c72` | `run_plugin` passes `c_alpha` to the solver; experiment script `run_scaling.py`; config with $c_\alpha = 1$ and the method `exact`; 3 new tests | 55 passed, 2 skipped |
+| 8 Nov | – | runs: solver floor (`results/scaling_n/20261108-132828`) and full plug-in sweep (`results/scaling_n/20261108-133521`), Section 1.9 | – |
 
 ### 1.3 The idea of the project
 
@@ -229,13 +239,36 @@ therefore always shows what is done (passed), what is missing (skipped) and what
 
 #### `experiments/`
 
-Draft config `scaling_n.yaml`: family F1, $n = 2, \dots, 8$, $A = 2$, $S = 3$, $H = 3$,
-$\sigma = 0.3$, $\varepsilon = 0.1$, 10 game instances per $n$, 10 sampling seeds per instance
-and budget. $N_{\text{all}}(\varepsilon)$ is the smallest budget at which at least 90 % of the
-seeds reach $\text{gap} \le \varepsilon$. Budgets double: plug-in $m = 1, 2, 4, \dots, 128$;
-Robust-Q-FTRL $N = 1, \dots, 32$ and $K = 64, \dots, 2048$. `run_scaling.py` is still a
-placeholder; its docstring describes the protocol (per instance, then mean and 95 % confidence
-interval per $n$ and method, raw data as CSV in `results/`).
+Config `scaling_n.yaml` (draft, values to be agreed on in the group): family F1,
+$n = 2, \dots, 8$, $A = 2$, $S = 3$, $H = 3$, $\sigma = 0.3$, $\varepsilon = 0.1$,
+$c_\alpha = 1$ (Section 1.8), 10 game instances per $n$, 10 sampling seeds per instance and
+budget. $N_{\text{all}}(\varepsilon)$ is the smallest budget at which at least 90 % of the
+seeds reach $\text{gap} \le \varepsilon$. Budgets double: plug-in $m = 1, 2, 4, \dots, 128$
+(solver with $K = 2000$); Robust-Q-FTRL $N = 1, \dots, 32$ and $K = 64, \dots, 2048$. The
+method `exact` solves the true model once per instance ($K = 2000$, no samples): with the same
+$K$ and $c_\alpha$, no method can get below this floor.
+
+`run_scaling.py` does steps 1 and 2 of the protocol (generate the games, run every method and
+budget with every seed, evaluate `gap_out` and `gap_in` on the true model). It writes one CSV
+row per run to `results/<name>/<timestamp>/runs.csv`, row by row, so an interrupted run keeps
+what it has. A copy of the config and `run_info.yaml` (command-line overrides, Python and numpy
+versions, start and end time) go into the same folder. Steps 3 to 5 ($N_{\text{all}}$,
+confidence intervals, plots) work on this CSV (Tiago).
+
+CSV columns: `family, n, S, H, A, sigma, instance_seed, sampling_seed, method, m, N, K,
+c_alpha, n_samples, gap_out, gap_in, runtime_s`. Columns that do not apply to a method stay
+empty (`m` only for plugin, `N` only for robust_q_ftrl, `sampling_seed` not for exact).
+
+```
+# solver floor only (a few minutes)
+python experiments/run_scaling.py experiments/configs/scaling_n.yaml --methods exact
+# everything for exact and plugin, 8 parallel processes
+python experiments/run_scaling.py experiments/configs/scaling_n.yaml --workers 8
+# quick test run
+python experiments/run_scaling.py experiments/configs/scaling_n.yaml --n 2 3 --instances 2 --seeds 2
+```
+
+`--n`, `--instances` and `--seeds` override the config; `--out` sets the output folder.
 
 ### 1.5 Implementation details and checks (commit `3dc00ed`)
 
@@ -401,19 +434,174 @@ all joint actions but solves the estimated game with the same solver, so that on
 collection differs. Exponential growth shows up as a straight line in a semi-log plot,
 polynomial growth as a straight line in a log-log plot.
 
-### 1.8 Open points (Kevin)
+### 1.8 Learning-rate constant $c_\alpha$ (commit `5119c72`)
 
-Done in `3dc00ed`: F1, simulator, TV worst case (greedy), `estimate_model`, code of
-`run_plugin`.
+The learning rates of Algorithm 2 (Eq. 21) are
 
-- `run_plugin` waits for Ali's `solve_exact` and the gap evaluation (planned by Sat 7 Nov);
-  then `test_run_plugin_counter` should pass.
-- Plug-in part of `experiments/run_scaling.py` and the plug-in sweep ($n = 2, \dots, 8$,
-  $m = 1, \dots, 128$) for the TA update (results Sun 8 Nov, update Mon 9 Nov). Agree on the
-  CSV format with Timon (Robust-Q-FTRL runs) and Tiago (statistics and plots).
-- Overleaf: environment and baseline (TA feedback points 1 and 3), including the remark that
-  the plug-in rewards are exact (Section 1.5).
-- Optional: game family F2, if time allows.
+$$\alpha_k = \frac{c_\alpha \log K}{k - 1 + c_\alpha \log K}, \qquad k = 1, \dots, K,$$
+
+and the output weights plan $k$ with $\alpha^K_k = \alpha_k \prod_{j = k+1}^{K} (1 - \alpha_j)$
+(Eq. 24). The paper requires $c_\alpha \ge 24$ (text above Eq. 21); Theorem 2 is proven under
+this condition. With $c_\alpha = 24$ and $K = 2000$, $c_\alpha \log K \approx 182$: the early
+plans, computed while the policies were still close to uniform, keep a large weight in the
+output.
+
+**Problem.** Even on the true model, the exact solver then leaves a gap above $\varepsilon$.
+`gap_out` of `solve_exact` on the true model (F1, $n = 2$ and $n = 4$, 3 instances each,
+$\sigma = 0.3$), range over the 6 games:
+
+| $c_\alpha$ | $K = 200$ | $K = 2000$ | $K = 10000$ |
+|---|---|---|---|
+| 24 | 0.12–0.22 | 0.10–0.12 | 0.06 |
+| 4 | 0.11–0.15 | 0.05–0.06 | 0.016–0.024 |
+| 1 | 0.08–0.10 | 0.02–0.03 | 0.004–0.012 |
+
+The measured gap is roughly estimation error (falls with more samples) plus solver error (falls
+with more iterations). With $c_\alpha = 24$ the solver error dominates: in a test run ($n = 3$,
+$K = 2000$) the plug-in gap did not fall with more samples (0.121 at $m = 1$, 0.135 at
+$m = 256$). The experiment would measure the solver, not the sample complexity. With
+$c_\alpha = 1$ the plug-in gap falls from 0.124 ($m = 1$) to 0.029 ($m = 64$), i.e. down to the
+solver floor (mean over 5 sampling seeds).
+
+**Consequence for Robust-Q-FTRL.** With the paper's $c_\alpha = 24$ the current grid
+$K \le 2048$ cannot reach $\varepsilon = 0.1$ even with infinitely many samples; it needs
+roughly $K \ge 10^4$. Options: (a) keep $c_\alpha = 24$ (faithful to Theorem 2) and extend the
+$K$ grid; (b) use $c_\alpha = 1$ (outside the condition of Theorem 2, a practical variant);
+(c) run both. For the plug-in baseline the solver is only a tool, so $c_\alpha = 1$ is
+unproblematic there.
+
+**Change in `5119c72`.** `run_plugin(sim, m, sigma, K, *, c_alpha=24.0)` passes `c_alpha` on to
+`solve_exact`; the default stays 24, so existing calls are unchanged. The config sets
+`c_alpha: 1.0` at the top level; `run_scaling.py` passes it to all methods, including
+`robust_q_ftrl.run(sim, sigma, K, N, c_alpha=..., seed=...)`. If the group chooses option (a)
+or (c), the config needs one value per method.
+
+New tests (3): `c_alpha` reaches the solver (`tests/test_plugin.py`); `run_scaling.py` covers
+the whole grid and writes rows with the right sample counter $H \cdot S \cdot 2^n \cdot m$
+(`tests/test_run_scaling.py`).
+
+### 1.9 First results: solver floor and plug-in sweep (8 Nov 2026)
+
+Settings as in Section 1.4 ($c_\alpha = 1$, $K = 2000$). Solver floor: 70 runs (7 values of
+$n$ × 10 instances), 4 min. Plug-in sweep: 5670 runs (7 × 10 × (1 + 10 seeds × 8 values of
+$m$)), 1 h 27 min with 8 parallel processes (11.6 h of compute; one plug-in run takes about 2 s
+at $n = 2$ and 16 s at $n = 8$). Raw data: `results/scaling_n/20261108-133521/runs.csv` (not in
+the repository). The `exact` rows of the sweep are identical to the separate floor run.
+
+The numbers below are a first look; the statistics and plots for the report are Tiago's part.
+
+**Solver floor** (`gap_out` on the true model, 10 instances per $n$):
+
+| $n$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| mean | 0.022 | 0.024 | 0.025 | 0.029 | 0.030 | 0.031 | 0.029 |
+| max | 0.028 | 0.031 | 0.032 | 0.033 | 0.035 | 0.035 | 0.034 |
+
+$\varepsilon = 0.1$ lies clearly above the floor for every $n$.
+
+**Plug-in: mean `gap_out`** over 10 instances × 10 seeds:
+
+| $n$ / $m$ | 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 |
+|---|---|---|---|---|---|---|---|---|
+| 2 | 0.130 | 0.110 | 0.065 | 0.048 | 0.035 | 0.028 | 0.026 | 0.024 |
+| 3 | 0.150 | 0.120 | 0.085 | 0.050 | 0.038 | 0.031 | 0.027 | 0.025 |
+| 4 | 0.149 | 0.103 | 0.078 | 0.052 | 0.037 | 0.031 | 0.028 | 0.027 |
+| 5 | 0.141 | 0.119 | 0.083 | 0.047 | 0.043 | 0.034 | 0.031 | 0.029 |
+| 6 | 0.157 | 0.108 | 0.075 | 0.054 | 0.042 | 0.035 | 0.033 | 0.032 |
+| 7 | 0.164 | 0.119 | 0.077 | 0.056 | 0.042 | 0.037 | 0.034 | 0.033 |
+| 8 | 0.122 | 0.082 | 0.048 | 0.035 | 0.031 | 0.030 | 0.029 | 0.029 |
+
+**Plug-in: $N_{\text{all}}(\varepsilon = 0.1)$.** Per instance, $m^\ast$ is the smallest $m$
+at which at least 9 of 10 seeds reach $\text{gap} \le 0.1$, and
+$N_{\text{all}} = H S 2^n m^\ast$. Mean over the 10 instances with a 95 % interval
+(mean $\pm 1.96 \cdot \text{sd} / \sqrt{10}$):
+
+| $n$ | median $m^\ast$ | $N_{\text{all}}$ mean | 95 % interval |
+|---|---|---|---|
+| 2 | 6 | 227 | ± 96 |
+| 3 | 8 | 590 | ± 208 |
+| 4 | 8 | 1094 | ± 313 |
+| 5 | 8 | 1901 | ± 414 |
+| 6 | 8 | 4147 | ± 1312 |
+| 7 | 8 | 8294 | ± 2625 |
+| 8 | 4 | 9677 | ± 2107 |
+
+Reading: the number of samples needed per (time step, state, joint action) stays at about
+$m^\ast \approx 8$, so the cost doubles with every additional agent. A straight-line fit of
+$\log_2 N_{\text{all}}$ against $n$ for $n = 2, \dots, 5$ has slope 1.01, i.e. a factor of
+$2 = A$ per agent: the expected exponential growth of the baseline (a straight line in the
+semi-log plot). Over all $n$ the slope is 0.92, pulled down by $n = 8$ (see below).
+
+**`gap_out` versus `gap_in`.** The two differ in about 40 % of the runs (exact and plug-in), but
+by at most 0.011 and with no fixed sign. With the threshold 0.1 they give the same $m^\ast$ for
+all 70 instances. For these solver outputs the choice hardly matters; we keep reporting
+`gap_out`, the quantity Theorem 2 controls.
+
+**Finding: F1 becomes nearly trivial for large $n$.** At $n = 8$, $m^\ast$ drops to 4 and the gap
+is lower than at $n = 7$ for every $m$. The reason is the recipe of F1: every joint action has
+its own independent random transition and reward. Agent $i$ sees the average over the
+$2^{n-1}$ action combinations of the others (mixed kernel, Eq. 35). By the law of large
+numbers this average is almost the same for both of agent $i$'s actions, so a single agent
+hardly matters any more. Measured with all agents playing uniformly (10 instances per $n$,
+$h = 0$, $\sigma = 0.3$ for the gap):
+
+| $n$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| mean TV distance between $\bar P(\cdot \mid s, a_i = 0)$ and $\bar P(\cdot \mid s, a_i = 1)$ | 0.28 | 0.19 | 0.14 | 0.094 | 0.067 | 0.048 | 0.032 |
+| mean $\lvert \bar r(s, 0) - \bar r(s, 1) \rvert$ | 0.14 | 0.075 | 0.059 | 0.040 | 0.030 | 0.020 | 0.014 |
+| mean gap of the uniform policy | 0.27 | 0.21 | 0.16 | 0.11 | 0.081 | 0.060 | 0.042 |
+| share of instances where the uniform policy already has gap $\le 0.1$ | 0 | 0 | 0 | 0.3 | 0.9 | 1 | 1 |
+
+The influence of one agent shrinks by about a factor $\sqrt 2$ per additional agent (an average
+of $2^{n-1}$ independent draws has a standard deviation proportional to $2^{-(n-1)/2}$). From
+$n = 6$ on, the uniform policy, which needs no samples at all, already has
+$\text{gap} \le \varepsilon$ in at least 90 % of the instances. $N_{\text{all}}$ for $n \ge 6$
+therefore says little about the plug-in baseline, and for Robust-Q-FTRL it would look like
+success even if the algorithm learned nothing. This touches TA feedback point 1: in F1,
+changing $n$ also changes how much a single agent matters, so $n$ is not the only thing that
+varies.
+
+Options (to be decided in the group and raised in the TA update):
+
+1. **Game family F2** (aggregative): the reward has an own-action term $c[s, a_i]$ whose size
+   does not depend on $n$; the others act only through the action histogram, whose change by one
+   agent shrinks like $1/n$ instead of $2^{-(n-1)/2}$. It was planned anyway as the family where
+   the same parameters define the game for every $n$.
+2. **Keep F1, add an own-action reward term** $v_i(s, a_i)$ that does not average out. Small
+   change to `random_game`, but it moves F1 towards F2.
+3. **Relative accuracy** $\varepsilon = c \cdot \text{gap(uniform)}$ per instance. No change to
+   the game, but at $n = 8$ with $c = 0.25$ this gives $\varepsilon \approx 0.011$, below the
+   solver floor of about 0.03, so it would need a much larger $K$.
+4. **Restrict F1 to $n = 2, \dots, 5$.** Only four points, too few to tell exponential from
+   polynomial growth.
+
+In every case, the gap of the uniform policy should be reported per $n$ as a reference line:
+a method only shows something where its $N_{\text{all}}$ is needed to get below that line.
+
+### 1.10 Open points (Kevin)
+
+Done in `5119c72`: `c_alpha` in `run_plugin`, `run_scaling.py` (methods `exact` and `plugin`),
+first floor run and full plug-in sweep (Section 1.9).
+
+- Decide on the game family (Section 1.9) and on $c_\alpha$ (Section 1.8) in the group,
+  preferably before Timon's Robust-Q-FTRL runs; both go into the TA update (Mon 9 Nov).
+- Implement F2 if the group chooses option 1, then rerun the floor and the plug-in sweep.
+- Hand `runs.csv` to Tiago for $N_{\text{all}}$, confidence intervals and the semi-log and
+  log-log plots (CSV format in Section 1.4).
+- Overleaf: environment and baseline (TA feedback points 1 and 3), the $c_\alpha$ issue
+  (Section 1.8), the F1 finding (Section 1.9), the remark that the plug-in rewards are exact
+  (Section 1.5).
+
+Notes for the others:
+
+- Timon: `run_scaling.py` calls `robust_q_ftrl.run(sim, sigma, K, N, c_alpha=c_alpha,
+  seed=sampling_seed)`; please keep these argument names. `learning_rates(K, H, c_alpha)` from
+  Ali can be reused. With $c_\alpha = 24$ and $K \le 2048$, $\varepsilon = 0.1$ is out of reach
+  (Section 1.8).
+- Tiago: one row per run, `gap_out` is the reported gap; the `exact` rows give the floor per
+  instance; $N_{\text{all}}$ as defined in Section 1.4 (at least 90 % of the seeds).
+- Ali: Section 4 is still to be filled in; the $c_\alpha$ table in Section 1.8 was computed
+  with your `solve_exact`.
 
 ---
 
