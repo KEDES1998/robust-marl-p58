@@ -70,10 +70,17 @@ def estimate_model(sim: GenerativeModel, m: int) -> MarkovGame:
     return game
 
 
-def run_plugin(sim: GenerativeModel, m: int, sigma: float | Sequence[float], K: int) -> PolicyMixture:
+def run_plugin(
+    sim: GenerativeModel, m: int, sigma: float | Sequence[float], K: int, *, c_alpha: float = 24.0
+) -> PolicyMixture:
     """Estimates the model, then solves it with ``robust_q_ftrl.solve_exact``.
+
+    ``c_alpha`` is the learning-rate constant of Eq. (21), passed on to the solver. Use the
+    same value as for Robust-Q-FTRL so that the two methods differ only in how they collect
+    data. The default is the paper's value 24; with K = 2000 it leaves a solver error of
+    about 0.1 on F1 games (n = 2, ..., 4), so the experiment config sets a smaller value.
 
     Afterwards the sample counter reads ``H * S * prod(A_i) * m``.
     """
     model = estimate_model(sim, m)
-    return solve_exact(model, sigma, K)
+    return solve_exact(model, sigma, K, c_alpha=c_alpha)

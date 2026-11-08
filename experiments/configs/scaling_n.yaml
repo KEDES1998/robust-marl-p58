@@ -14,7 +14,14 @@ n_instances: 10       # random games per n (seeds 0..9)
 n_sampling_seeds: 10  # repetitions per game and budget
 success_rate: 0.9     # N_all(eps) = smallest budget with gap <= eps in >= 90 % of seeds
 
+# Learning-rate constant of Eq. (21), the same for both methods (proposal, to be agreed).
+# The paper's value 24 leaves a solver error of about 0.10-0.12 with K = 2000 on F1
+# (n = 2, 4), i.e. above epsilon; with 1 it is about 0.02-0.03 (see Protocol.md).
+c_alpha: 1.0
+
 methods:
+  exact:                               # solver on the true model: the floor no method can beat
+    K: 2000
   plugin:
     m: [1, 2, 4, 8, 16, 32, 64, 128]   # samples per (h, s, joint action), doubling
     K_solver: 2000

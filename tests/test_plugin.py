@@ -49,3 +49,16 @@ def test_run_plugin_counter():
     mixture = run_plugin(sim, m=2, sigma=0.2, K=10)
     mixture.validate(game.spec)
     assert sim.n_samples == game.spec.H * game.spec.S * game.spec.n_joint * 2
+
+
+def test_run_plugin_passes_c_alpha():
+    """``c_alpha`` reaches the solver: same samples, same result as solving the estimate by hand."""
+    from rmg.robust_q_ftrl import solve_exact
+
+    game = random_game(n=2, S=3, H=2, A=2, seed=0)
+    mix = run_plugin(GenerativeModel(game, seed=5), m=3, sigma=0.3, K=50, c_alpha=1.0)
+    ref = solve_exact(estimate_model(GenerativeModel(game, seed=5), m=3), 0.3, 50, c_alpha=1.0)
+    assert np.allclose(mix.weights, ref.weights)
+    assert all(np.allclose(p, q) for p, q in zip(mix.pis, ref.pis))
+    default = run_plugin(GenerativeModel(game, seed=5), m=3, sigma=0.3, K=50)
+    assert not np.allclose(mix.weights, default.weights)

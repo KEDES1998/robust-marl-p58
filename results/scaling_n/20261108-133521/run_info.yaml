@@ -1,0 +1,14 @@
+config: experiments/configs/scaling_n.yaml
+overrides:
+  methods:
+  - exact
+  - plugin
+  n: null
+  instances: null
+  seeds: null
+  workers: 8
+started: '2026-11-08T13:35:21'
+finished: '2026-11-08T15:02:17'
+n_runs: 5670
+python: 3.14.3
+numpy: 2.5.4
