@@ -66,7 +66,7 @@ cancels, and its only effect is through P̄, which is averaged out as in step 3.
 
 10 instances per n, agent 0, others uniform, all (h, s), gap with σ = 0.3. These are the
 current code's results (reproduced on 2026-11-19; the numbers match Protocol.md, Section 1.9),
-produced by [`experiments/f1_triviality.py`](../experiments/f1_triviality.py):
+produced by [`experiments/f1_triviality.py`](../../experiments/f1_triviality.py):
 
 ```bash
 python experiments/f1_triviality.py experiments/configs/scaling_n.yaml

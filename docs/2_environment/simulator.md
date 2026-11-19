@@ -2,7 +2,7 @@
 
 Every method sees the game only through the generative model, and every answer
 costs one sample. This counter is N_all, so all methods are measured with the same ruler.
-Code: [`src/rmg/simulator.py`](../src/rmg/simulator.py).
+Code: [`src/rmg/simulator.py`](../../src/rmg/simulator.py).
 
 ## Access rules
 
@@ -54,7 +54,7 @@ What one query is worth differs between the two methods:
 - **Robust-Q-FTRL** fixes only agent i's own action. The others draw their actions from their
   current policies, so one query is a sample of agent i's averaged kernel. The reward
   estimate averages over the others' sampled actions and is noisy. This is a small advantage
-  for the baseline that the report should mention ([deviations.md](deviations.md)).
+  for the baseline that the report should mention ([deviations.md](../5_deviations/deviations.md)).
 - Robust-Q-FTRL batches all agents' queries of one (h, k) into one `sample_batch` call.
   Each query is still counted once, so batching doesn't change the cost.
 

@@ -43,7 +43,7 @@ The CSVs are concatenated, so a plug-in sweep and a Robust-Q-FTRL sweep can be a
 together. It prints per (method, n): solved/total, geometric mean, median, min, max, the
 typical budget, and `solved_by_K1`. Then the semi-log and log-log slopes and the solver
 floor if `exact` rows are present. `--plot` writes a semi-log and a log-log panel. The
-definitions are in [metrics.md](metrics.md).
+definitions are in [metrics.md](../1_introduction/metrics.md).
 
 ### `experiments/f1_triviality.py`: influence of one agent in F1
 
@@ -53,7 +53,7 @@ python experiments/f1_triviality.py <config> [--n ...] [--instances I] [--eps 0.
 
 Measured and predicted reward and transition differences for agent 0, the uniform-policy
 gap, and the share of instances under each ε. Needs A = 2. Background:
-[F1_triviality.md](F1_triviality.md).
+[F1_triviality.md](../2_environment/F1_triviality.md).
 
 ## Configs (`experiments/configs/`)
 
@@ -102,7 +102,7 @@ CSV columns:
 | `K` | solver or FTRL iterations |
 | `c_alpha` | learning-rate constant |
 | `n_samples` | simulator queries (0 for `exact`) |
-| `gap_out`, `gap_in` | gaps on the true model ([metrics.md](metrics.md)) |
+| `gap_out`, `gap_in` | gaps on the true model ([metrics.md](../1_introduction/metrics.md)) |
 | `runtime_s` | wall time of the run including evaluation |
 
 `c_b` is passed to the solver but **not** written to the CSV. It is only recorded in the
