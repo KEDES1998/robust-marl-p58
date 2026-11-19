@@ -97,6 +97,31 @@ All Robust-Q-FTRL budgets have N = 1.
 - Extrapolating the informative range (plug-in ≈ 9·8·2ⁿ, Robust-Q-FTRL ≈ 18·256·n at ε = 0.1),
   the curves would cross at about n ≈ 10. On F1 this can't be measured.
 
+## Duration
+
+Measured on one machine with 8 parallel processes. Run times include the exact gap evaluation.
+
+| Sweep | Runs | Wall time | Compute time |
+|---|---|---|---|
+| plug-in + solver floor | 5,670 | 1 h 27 min | 11.6 h |
+| Robust-Q-FTRL (K ≥ 32) | 9,800 | 1 h 32 min | 12.3 h |
+| Robust-Q-FTRL, K = 1 only | 1,400 | 6 s | < 1 min |
+
+Mean time per run (seconds):
+
+| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| plug-in (any m) | 2.1 | 3.2 | 4.5 | 6.2 | 8.7 | 11.3 | 15.5 |
+| Robust-Q-FTRL (average over the grid) | 1.8 | 2.4 | 3.2 | 4.5 | 4.9 | 6.5 | 8.4 |
+
+- **Plug-in** time is dominated by the 2000 solver iterations on the estimated game, which
+  has 2ⁿ joint actions. It grows about ×1.4 per agent and doesn't depend on m (15.5 s at
+  n = 8 for every m from 1 to 128).
+- **Robust-Q-FTRL** time grows linearly in K: at n = 8 it goes from 0.5 s (K = 32) to 30 s
+  (K = 2048). It grows only mildly in n.
+- Wall-clock time is not the quantity under test. The claim is about samples. Still, it shows
+  the same pattern: the cost of the joint-action method grows exponentially in n.
+
 ## Threats to validity
 
 - **Few informative points:** three values of n at ε = 0.1 are thin evidence for a growth rate.
