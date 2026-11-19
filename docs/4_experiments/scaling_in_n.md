@@ -101,6 +101,3 @@ All Robust-Q-FTRL budgets have N = 1.
 
 - **Few informative points:** three values of n at ε = 0.1 are thin evidence for a growth rate.
 - **Outside Theorem 2's conditions:** c_α = 1 instead of ≥ 24, and c_b = 0 ([deviations.md](../5_deviations/deviations.md)).
-- **Baseline advantages:** exact rewards and free solver iterations favour plug-in on constants,
-  though not on the growth rate.
-- **Grid resolution:** N_all is always a grid point. Doubling grids can overstate the cost by up to 2×.
