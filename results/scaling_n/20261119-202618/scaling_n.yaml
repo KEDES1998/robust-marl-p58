@@ -1,7 +1,7 @@
 # Robust-Q-FTRL on game family F1
 name: scaling_n
 family: F1
-n: [2, 3, 4, 5, 6, 7, 8]
+n: [2, 3, 4, 5, 6, 7, 8, 9]
 A: 2
 S: 3
 H: 3

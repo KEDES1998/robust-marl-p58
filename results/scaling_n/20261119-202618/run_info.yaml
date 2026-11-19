@@ -8,8 +8,8 @@ overrides:
   instances: null
   seeds: null
   workers: 8
-started: '2026-11-19T18:54:54'
-finished: '2026-11-19T19:16:33'
-n_runs: 16870
+started: '2026-11-19T20:26:18'
+finished: '2026-11-19T20:57:56'
+n_runs: 19280
 python: 3.14.7
 numpy: 2.5.5
