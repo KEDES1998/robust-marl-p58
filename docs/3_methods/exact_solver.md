@@ -27,7 +27,7 @@ output: the K plans with weights alpha^K_k                          Eq. (24)
 ```
 
 The mixed kernel P̄ is agent i's view of the transition, averaged over what the other agents
-play. The uncertainty ball sits around it ([uncertainty_sets.md](../1_introduction/uncertainty_sets.md)).
+play. The uncertainty ball sits around it.
 There is no bonus, because there is no estimation error.
 
 ## Learning rates
@@ -44,12 +44,9 @@ A larger c_α keeps more weight on the early plans, which were computed while th
 were still near uniform. With the paper's c_α = 24, the floor at K = 2000 is 0.10–0.12. That
 is why we use c_α = 1 ([deviations.md](../5_deviations/deviations.md)).
 
-With K = 1, log K = 0, so η = 0 and the output is the uniform policy with weight 1:
-**K = 1 learns nothing**.
-
 ## Solver floor on F1
 
-`gap_out` on the true model, K = 2000, c_α = 1, 10 instances per n:
+`gap` on the true model, K = 2000, c_α = 1, 10 instances per n:
 
 | n | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|

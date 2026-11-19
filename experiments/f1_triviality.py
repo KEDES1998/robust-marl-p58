@@ -1,6 +1,6 @@
 """Experiment: how fast does a single agent's influence vanish in F1 as n grows?
 
-Background and derivation: docs/F1_triviality.md.
+Background and derivation: docs/2_environment/F1_triviality.md.
 
 For every n and instance it measures, with all other agents playing uniformly:
 

@@ -1,22 +1,5 @@
 # Notation
 
-Paper symbols, code names and array shapes side by side. Paper: Shi et al. (2024),
-*Breaking the Curse of Multiagency in Robust Multi-Agent RL* (arXiv 2409.20067).
-
-## Index conventions
-
-| | Paper | Code |
-|---|---|---|
-| time step | h = 1, …, H | `h = 0, …, H-1`; `V[:, H] = 0` is the terminal value |
-| state | s ∈ 𝒮, \|𝒮\| = S | `s = 0, …, S-1` |
-| action of agent i | aᵢ ∈ 𝒜ᵢ, \|𝒜ᵢ\| = Aᵢ | `a_i = 0, …, A_i - 1` |
-| agent | i = 1, …, n | `i = 0, …, n-1` |
-| joint action | a = (a₁, …, aₙ) | a tuple that indexes the arrays directly: `P[h, s, a_1, …, a_n, s']` |
-| others' actions | a₋ᵢ | the action axes of all agents j ≠ i |
-
-When a formula from the paper uses H − h + 1 (remaining steps), the code uses `H - h`.
-Example: the value cap in Eq. (25) is `min(…, H - h)`.
-
 ## Game
 
 | Symbol | Meaning | Code | Shape / type |
@@ -30,9 +13,6 @@ Example: the value cap in Eq. (25) is `min(…, H - h)`.
 | w | weight of g(s) in the reward (F1) | `random_game(..., w=0.5)` | float in [0, 1] |
 | β (Dirichlet) | concentration of the F1 transitions | `random_game(..., beta=1.0)` | float > 0 |
 
-β means two different things: the Dirichlet concentration of F1 (`beta` in `games.py`)
-and the bonus of Eq. (23) (`beta` in `robust_q_ftrl.py`). They have nothing to do with each other.
-
 ## Robustness
 
 | Symbol | Meaning | Code |
@@ -43,8 +23,6 @@ and the bonus of Eq. (23) (`beta` in `robust_q_ftrl.py`). They have nothing to d
 | P̄^{π₋ᵢ}_h(· \| s, aᵢ) | agent i's averaged kernel (Eq. 35) | `mixed_kernel(game, pi, i, h)[0]`, shape `(S, A_i, S)` |
 | r̄^{π₋ᵢ}_{i,h}(s, aᵢ) | agent i's averaged reward | `mixed_kernel(game, pi, i, h)[1]`, shape `(S, A_i)` |
 
-Details: [uncertainty_sets.md](uncertainty_sets.md).
-
 ## Policies
 
 | Symbol | Meaning | Code | Shape |
@@ -54,7 +32,6 @@ Details: [uncertainty_sets.md](uncertainty_sets.md).
 | ξ̂ (paper's output distribution) | mixture of K plans | `PolicyMixture(pis, weights)` | `pis[i]`: `(K, H, S, A_i)`, `weights`: `(K,)` |
 | α^K_k | weight of plan k (Eq. 24) | `mixture.weights[k-1]` | sums to 1 |
 
-A product policy is a mixture with K = 1 (`PolicyMixture.from_product`).
 
 ## Algorithm
 
@@ -80,5 +57,3 @@ A product policy is a mixture with K = 1 (`PolicyMixture.from_product`).
 | gap | max_{i,s}(V_best − V_follow) at h = 0 | `gap_product`, `gap_out`, `gap_in` |
 | ε | target accuracy | `epsilon` in the config |
 | N_all(ε) | samples needed to reach gap ≤ ε | `n_samples` column + `analyze_scaling.py` |
-
-Definitions: [metrics.md](metrics.md).

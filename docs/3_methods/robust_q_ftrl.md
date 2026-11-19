@@ -2,7 +2,6 @@
 
 The paper's method: the FTRL loop of the [exact solver](exact_solver.md), with the exact mixed
 kernel replaced by estimates from the simulator (Algorithm 1) and a bonus added to V.
-Code: `robust_q_ftrl.run(sim, sigma, K, N, c_alpha=, c_b=, delta=, seed=)`.
 
 ## Algorithm 1: N-sample estimation
 
@@ -17,9 +16,6 @@ Theorem 2 comes from.
 
 Unlike the plug-in baseline, the reward estimate is noisy: it averages over the others'
 sampled actions.
-
-All S · N · Σᵢ Aᵢ queries of one (h, k) go into one simulator batch, which is valid because
-every agent samples under the same π^k.
 
 ## Loop
 
@@ -51,23 +47,3 @@ n_samples = H · K · N · S · Σᵢ Aᵢ        (sweep setting: 18 · K · N �
 Two random streams: the other agents' actions use the `seed` argument, and the next states
 come from the simulator. `run_scaling.py` passes the sampling seed for both, so a run is
 reproducible.
-
-## Checks
-
-From `tests/test_robust_q_ftrl.py`:
-
-- with N = 5000 and c_b = 0, V matches the exact solver within 0.03 on the toy game;
-- a huge c_b pushes V to the cap H − h;
-- on F1 (n = 3, K = 256), the gap approaches the exact solver's as N grows (0.095 at N = 64 vs 0.096);
-- the sample count is Σ, not ∏ (`test_run_sample_count_is_sum_not_product`).
-
-## Results on F1 (ε = 0.1)
-
-- **N = 1 suffices.** N = 4 lowers the gap by at most 0.01 at 4× the cost. The gap is limited
-  by K (optimisation), not by the samples per iteration.
-- **The K needed doesn't grow with n:** K = 256 at n = 2–4, then less. The cost is linear in n,
-  while the plug-in baseline's doubles per agent.
-- **Constant factor:** for n ≤ 4 Robust-Q-FTRL needs 26–69× more samples than the plug-in
-  baseline, which gets its 2000 solver iterations for free. The extrapolated crossover is
-  n ≈ 10, which F1 can't show because it is trivial there
-  ([F1_triviality.md](../2_environment/F1_triviality.md)).
