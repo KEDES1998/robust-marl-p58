@@ -55,9 +55,31 @@ Tue 10 Nov project session · 21 Nov main results for C1, report without abstrac
 
 Please agree on changes to these formats in the group first.
 
+## Setup
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repo root:
+
+```bash
+uv sync --locked
+```
+
+uv creates `.venv`, installs the project in editable mode, and installs the locked
+runtime and development dependencies. Python 3.10 or newer is required; uv downloads
+a compatible interpreter if needed. No manual virtual environment activation is needed.
+
+Run experiments through uv, for example:
+
+```bash
+uv run python experiments/run_scaling.py experiments/configs/scaling_n.yaml --methods exact
+```
+
+Dependencies are declared in `pyproject.toml`; commit `uv.lock` when changing them.
+Use `uv add <package>` for runtime dependencies and `uv add --dev <package>` for
+development dependencies.
+
 ## Tests
 
-`pytest` shows what is done (passed), what is still missing (skipped: "not implemented yet")
+`uv run pytest` shows what is done (passed), what is still missing (skipped: "not implemented yet")
 and what is wrong (failed). Whoever implements a function makes its tests pass.
 
 ## Reproducibility

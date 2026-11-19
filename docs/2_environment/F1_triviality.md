@@ -69,7 +69,7 @@ current code's results (reproduced on 2026-11-19; the numbers match Protocol.md,
 produced by [`experiments/f1_triviality.py`](../../experiments/f1_triviality.py):
 
 ```bash
-python experiments/f1_triviality.py experiments/configs/scaling_n.yaml
+uv run python experiments/f1_triviality.py experiments/configs/scaling_n.yaml
 ```
 
 
