@@ -218,8 +218,8 @@ def print_summary(rows: list[dict], epsilon: float) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("config", help="path to the YAML config")
-    parser.add_argument("--methods", nargs="+", choices=METHODS, default=["exact", "plugin"],
-                        help="methods to run (default: exact plugin)")
+    parser.add_argument("--methods", nargs="+", choices=METHODS, default=["exact", "plugin", "robust_q_ftrl"],
+                        help="methods to run (default: exact plugin robust_q_ftrl)")
     parser.add_argument("--n", nargs="+", type=int, help="override the values of n")
     parser.add_argument("--instances", type=int, help="override n_instances")
     parser.add_argument("--seeds", type=int, help="override n_sampling_seeds")
