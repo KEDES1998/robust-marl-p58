@@ -20,13 +20,10 @@ structure across agents.
 
 ## Generation recipe
 
-`random_game(n, S, H, A, seed, beta=1.0)` uses `rng = np.random.default_rng(seed)`:
+`random_game(n, S, H, A, seed, beta=1.0, w=0.5)` uses `rng = np.random.default_rng(seed)`:
 
-1. **Transitions:** `P[h, s, a, :] ~ Dirichlet(beta · 1_S)`, drawn independently for every (h, s, a).
-   With β = 1 this is uniform on the simplex.
+1. **Transitions:** `P[h, s, a, :] ~ Dirichlet(beta · 1_S)`, drawn independently for every (h, s, a) with β = 1.
 2. **State quality:** `g = linspace(0, 1, S)`. For S = 3 this gives g = (0, 0.5, 1).
-3. **Rewards:** `R[i, h, s, a] = 0.5 · g(s) + 0.5 · u`, where `u ~ Unif[0, 1]` independently per entry.
+3. **Rewards:** `R[i, h, s, a] = w · g(s) + (1 − w) · u`, where `u ~ Unif[0, 1]` independently for every (i, h, s, a) with w = 0.5.
 
-The shared g(s) part makes some states clearly better than others for every agent.
-Without it, the adversarial transition (see below) would have little to exploit.
-The noise part makes each agent's incentives different.
+The shared g(s) part makes some states clearly better than others for every agent. Without it the agents would have little to exploit. The noise part makes each agent's incentives different.

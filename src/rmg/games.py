@@ -82,7 +82,9 @@ class MarkovGame:
             raise ValueError("R is not in [0, 1].")
 
 
-def random_game(n: int, S: int, H: int, A: int | tuple[int, ...], seed: int, beta: float = 1.0) -> MarkovGame:
+def random_game(
+    n: int, S: int, H: int, A: int | tuple[int, ...], seed: int, beta: float = 1.0, w: float = 0.5
+) -> MarkovGame:
     """Game family F1: unstructured random game.
 
     Recipe (identical for every n; ``seed`` alone determines the instance):
@@ -90,13 +92,18 @@ def random_game(n: int, S: int, H: int, A: int | tuple[int, ...], seed: int, bet
     - Every state has a quality ``g(s)`` spread evenly over [0, 1], e.g. 0, 0.5, 1 for S = 3.
       Without it, good and bad states barely differ and the worst case has
       nothing to exploit.
-    - ``R[i, h, s, a] = 0.5 * g(s) + 0.5 * u`` with ``u ~ Unif[0, 1]`` per entry.
+    - ``R[i, h, s, a] = w * g(s) + (1 - w) * u`` with ``u ~ Unif[0, 1]`` per entry.
     - ``P[h, s, a, :] ~ Dirichlet(beta * 1)``.
 
     Args:
         A: number of actions per agent; a single int means "the same for all".
         beta: Dirichlet concentration; small = peaked distributions, large = flat ones.
+        w: weight of the state quality in the reward, in [0, 1]. w = 0 gives a pure random
+            general-sum game, w = 1 an identical-interest game (rewards depend only on s).
+            Does not change the random draws, so the same seed gives the same P and u for every w.
     """
+    if not 0.0 <= w <= 1.0:
+        raise ValueError(f"w = {w} is not in [0, 1].")
     A = (A,) * n if isinstance(A, int) else tuple(A)
     spec = GameSpec(n=n, S=S, H=H, A=A)
     rng = np.random.default_rng(seed)
@@ -104,17 +111,17 @@ def random_game(n: int, S: int, H: int, A: int | tuple[int, ...], seed: int, bet
     # Transitions: one Dirichlet draw per (h, s, joint action); last axis = next state.
     P = rng.dirichlet(beta * np.ones(S), size=(H, S, *A))
 
-    # Rewards: half state quality (same for everyone), half noise (per agent and entry).
+    # Rewards: weight w on state quality (same for everyone), 1 - w on noise (per agent and entry).
     g = np.linspace(0.0, 1.0, S)
     g_broadcast = g.reshape((1, 1, S) + (1,) * n)           # aligns with axis s of R
-    R = 0.5 * g_broadcast + 0.5 * rng.uniform(size=(n, H, S, *A))
+    R = w * g_broadcast + (1.0 - w) * rng.uniform(size=(n, H, S, *A))
 
     game = MarkovGame(
         spec=spec,
         P=P,
         R=R,
         name=f"F1 n={n} seed={seed}",
-        meta={"family": "F1", "n": n, "S": S, "H": H, "A": A, "seed": seed, "beta": beta},
+        meta={"family": "F1", "n": n, "S": S, "H": H, "A": A, "seed": seed, "beta": beta, "w": w},
     )
     game.validate()
     return game

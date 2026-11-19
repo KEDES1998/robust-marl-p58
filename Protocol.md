@@ -127,7 +127,8 @@ game (true P, R)
 Game family F1 (`random_game`) uses the same recipe for every $n$:
 
 - every state gets a quality $g(s)$ spread evenly over $[0, 1]$ (for $S = 3$: $0, 0.5, 1$),
-- $R_i(h, s, a) = 0.5\, g(s) + 0.5\, u$ with $u \sim \text{Unif}[0, 1]$,
+- $R_i(h, s, a) = w\, g(s) + (1 - w)\, u$ with $u \sim \text{Unif}[0, 1]$ and weight
+  $w \in [0, 1]$ (default $0.5$),
 - $P(\cdot \mid h, s, a) \sim \text{Dirichlet}(\beta \mathbf{1})$; small $\beta$ gives peaked
   distributions, large $\beta$ flat ones.
 
@@ -278,7 +279,7 @@ python experiments/run_scaling.py experiments/configs/scaling_n.yaml --n 2 3 --i
 - `A` may be one number (same for every agent) or a tuple $(A_1, \dots, A_n)$.
 - One random generator per `seed`: first one Dirichlet draw per $(h, s, \text{joint action})$
   for $P$, then the uniform noise for $R$. The quality is $g = (0, \tfrac{1}{S-1}, \dots, 1)$.
-- `meta` stores all parameters (family, $n$, $S$, $H$, $A$, seed, $\beta$); the name reads
+- `meta` stores all parameters (family, $n$, $S$, $H$, $A$, seed, $\beta$, $w$); the name reads
   e.g. `F1 n=3 seed=0`.
 
 Checks:
