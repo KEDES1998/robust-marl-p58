@@ -156,16 +156,6 @@ def run_job(job: dict) -> dict:
     return row
 
 
-def check_robust_q_ftrl_ready() -> None:
-    """Fails fast, before the sweep starts, if ``robust_q_ftrl.run`` is still a stub."""
-    from rmg.games import toy_public_goods_game
-
-    try:
-        robust_q_ftrl.run(GenerativeModel(toy_public_goods_game(), seed=0), 0.2, K=1, N=1, seed=0)
-    except NotImplementedError as exc:
-        sys.exit(f"Method robust_q_ftrl cannot run yet: {exc}. Leave it out of --methods.")
-
-
 # ---------------------------------------------------------------------------
 # Running and summary
 # ---------------------------------------------------------------------------
@@ -236,8 +226,6 @@ def main(argv: list[str] | None = None) -> None:
     if args.seeds is not None:
         cfg["n_sampling_seeds"] = args.seeds
 
-    if "robust_q_ftrl" in args.methods:
-        check_robust_q_ftrl_ready()
     make_game(cfg, cfg["n"][0], 0)  # fails here, not in a worker, if the family is not available
 
     started = datetime.now()
