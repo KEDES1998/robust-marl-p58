@@ -22,7 +22,7 @@ does a larger σ need fewer samples (not run yet, see [planned.md](planned.md))?
 ## Design
 
 **Held fixed:** game family F1 ([game_F1.md](../2_environment/game_F1.md)), S = 3 states,
-H = 3 steps, A = 2 actions per agent, σ = 0.3, c_α = 1, c_b = 0, success rate 90 %.
+H = 3 steps, A = 2 actions per agent, β = 1, w = 0.5, σ = 0.3, c_α = 1, c_b = 0, success rate 90 %.
 
 **Varied:** n = 2, 3, …, 8.
 

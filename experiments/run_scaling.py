@@ -75,13 +75,17 @@ from rmg.simulator import GenerativeModel  # noqa: E402
 METHODS = ("exact", "plugin", "robust_q_ftrl")
 
 FIELDS = [
-    "family", "n", "S", "H", "A", "sigma",
+    "family", "n", "S", "H", "A", "beta", "w", "sigma",
     "instance_seed", "sampling_seed",
     "method", "m", "N", "K", "c_alpha",
     "n_samples", "gap_out", "gap_in", "runtime_s",
 ]
 """One row per run. Columns that do not apply to a method stay empty
-(``m`` only for plugin, ``N`` only for robust_q_ftrl, ``sampling_seed`` not for exact)."""
+(``m`` only for plugin, ``N`` only for robust_q_ftrl, ``sampling_seed`` not for exact).
+``beta`` and ``w`` are the F1 parameters of ``random_game``."""
+
+GAME_DEFAULTS = {"beta": 1.0, "w": 0.5}
+"""Defaults of ``random_game``, used when the config does not set ``beta`` or ``w``."""
 
 
 # ---------------------------------------------------------------------------
@@ -90,9 +94,14 @@ FIELDS = [
 
 
 def make_game(cfg: dict, n: int, instance_seed: int) -> MarkovGame:
-    """The game of the configured family for n agents; ``instance_seed`` alone fixes the instance."""
+    """The game of the configured family for n agents; ``instance_seed`` alone fixes the instance.
+
+    F1 also needs ``beta`` (Dirichlet concentration) and ``w`` (state weight in the reward);
+    ``main`` and ``build_jobs`` fill in ``GAME_DEFAULTS`` if the config does not set them.
+    """
     if cfg["family"] == "F1":
-        return random_game(n=n, S=cfg["S"], H=cfg["H"], A=cfg["A"], seed=instance_seed)
+        return random_game(n=n, S=cfg["S"], H=cfg["H"], A=cfg["A"], seed=instance_seed,
+                           beta=cfg["beta"], w=cfg["w"])
     if cfg["family"] == "F2":
         raise NotImplementedError("game family F2 (aggregative_game) is not implemented yet")
     raise ValueError(f"unknown family {cfg['family']!r}, expected F1 or F2")
@@ -102,6 +111,7 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
     """All runs as small dicts, most expensive first (large n), for an even load across workers."""
     jobs = []
     base = {key: cfg[key] for key in ("family", "S", "H", "A", "sigma", "c_alpha")}
+    base.update({key: cfg.get(key, default) for key, default in GAME_DEFAULTS.items()})
     for n in cfg["n"]:
         for inst in range(cfg["n_instances"]):
             common = dict(base, n=n, instance_seed=inst)
@@ -125,7 +135,7 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
 def run_job(job: dict) -> dict:
     """Runs one job and returns its CSV row. Only the evaluation reads the true model."""
     start = time.perf_counter()
-    cfg = {"family": job["family"], "S": job["S"], "H": job["H"], "A": job["A"]}
+    cfg = {key: job[key] for key in ("family", "S", "H", "A", *GAME_DEFAULTS)}
     game = make_game(cfg, job["n"], job["instance_seed"])
     sigma, c_alpha = job["sigma"], job["c_alpha"]
 
@@ -225,6 +235,8 @@ def main(argv: list[str] | None = None) -> None:
         cfg["n_instances"] = args.instances
     if args.seeds is not None:
         cfg["n_sampling_seeds"] = args.seeds
+    for key, default in GAME_DEFAULTS.items():
+        cfg.setdefault(key, default)
 
     make_game(cfg, cfg["n"][0], 0)  # fails here, not in a worker, if the family is not available
 
