@@ -40,11 +40,19 @@ def test_main_writes_rows_with_the_right_counters(run_scaling, tmp_path):
 
     with open(tmp_path / "out" / "runs.csv") as f:
         rows = list(csv.DictReader(f))
-    assert len(rows) == 20
+    # default methods: exact, plugin, robust_q_ftrl
+    # per n: 2 instances x (1 exact + 2 seeds x (2 values of m + 1 (N, K) pair))
+    assert len(rows) == 2 * 2 * (1 + 2 * (2 + 1))
     assert set(rows[0]) == set(run_scaling.FIELDS)
+    H, S = TINY["H"], TINY["S"]
     for r in rows:
-        n, m = int(r["n"]), r["m"]
-        expected = 0 if r["method"] == "exact" else TINY["H"] * TINY["S"] * 2**n * int(m)
+        n = int(r["n"])
+        if r["method"] == "exact":
+            expected = 0
+        elif r["method"] == "plugin":
+            expected = H * S * 2**n * int(r["m"])                       # H S prod_i A_i m
+        else:
+            expected = H * int(r["K"]) * int(r["N"]) * S * 2 * n        # H K N S sum_i A_i
         assert int(r["n_samples"]) == expected
         assert float(r["gap_out"]) >= 0.0
         assert float(r["c_alpha"]) == 1.0
