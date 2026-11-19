@@ -1,0 +1,13 @@
+config: experiments\configs\scaling_n_f1_rq.yaml
+overrides:
+  methods:
+  - robust_q_ftrl
+  n: null
+  instances: null
+  seeds: null
+  workers: 8
+started: '2026-11-14T11:41:25'
+finished: '2026-11-14T13:13:53'
+n_runs: 9800
+python: 3.14.6
+numpy: 2.5.4

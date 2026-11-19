@@ -58,5 +58,25 @@ def tv_worst_case(p: np.ndarray, V: np.ndarray, sigma: float) -> float | np.ndar
 
 
 def tv_worst_case_dual(p: np.ndarray, V: np.ndarray, sigma: float) -> float | np.ndarray:
-    """Dual form, Eq. (19) (Timon). Same inputs and outputs as ``tv_worst_case``."""
-    raise NotImplementedError("Timon: TV worst case (dual form)")
+    """Dual form, Eq. (19) (Timon). Same inputs and outputs as ``tv_worst_case``.
+
+    ``max_{alpha in [min V, max V]} { p . [V]_alpha - sigma * (alpha - min_s [V]_alpha(s)) }``
+    with ``[V]_alpha = min(V, alpha)``. For alpha >= min V, ``min_s [V]_alpha = min V``.
+
+    The objective is concave and piecewise linear in alpha (``p . min(V, alpha)`` is concave,
+    the penalty is linear), with kinks only at the values ``V(s)``. Its maximum is therefore
+    attained at one of the ``V(s)``, and evaluating all S candidates is exact.
+    Cost O(S^2) per row instead of the O(S log S) of the greedy version; S is small here.
+    """
+    p = np.asarray(p, dtype=float)
+    V = np.asarray(V, dtype=float)
+    if V.ndim != 1 or p.shape[-1] != V.shape[0]:
+        raise ValueError(f"p has shape {p.shape}, V has shape {V.shape}; expected (..., S) and (S,).")
+    if not 0.0 <= sigma <= 1.0:
+        raise ValueError(f"sigma = {sigma} is not in [0, 1].")
+
+    alphas = V                                              # candidate levels, shape (S,)
+    clipped = np.minimum(V[None, :], alphas[:, None])       # clipped[c, s] = [V]_{alpha_c}(s)
+    objective = p @ clipped.T - sigma * (alphas - V.min())  # shape (..., S): one value per candidate
+    result = objective.max(axis=-1)
+    return float(result) if result.ndim == 0 else result

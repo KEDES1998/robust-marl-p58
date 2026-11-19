@@ -116,7 +116,8 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
                     rq = cfg["methods"]["robust_q_ftrl"]
                     for N in rq["N"]:
                         for K in rq["K"]:
-                            jobs.append(dict(common, method="robust_q_ftrl", sampling_seed=seed, N=N, K=K))
+                            jobs.append(dict(common, method="robust_q_ftrl", sampling_seed=seed, N=N, K=K,
+                                             c_b=rq.get("c_b", 1.0)))
     jobs.sort(key=lambda job: -job["n"])
     return jobs
 
@@ -137,7 +138,9 @@ def run_job(job: dict) -> dict:
         n_samples = sim.n_samples
     elif job["method"] == "robust_q_ftrl":
         sim = GenerativeModel(game, seed=job["sampling_seed"])
-        mixture = robust_q_ftrl.run(sim, sigma, job["K"], job["N"], c_alpha=c_alpha, seed=job["sampling_seed"])
+        mixture = robust_q_ftrl.run(
+            sim, sigma, job["K"], job["N"], c_alpha=c_alpha, c_b=job.get("c_b", 1.0), seed=job["sampling_seed"]
+        )
         n_samples = sim.n_samples
     else:
         raise ValueError(f"unknown method {job['method']!r}")
