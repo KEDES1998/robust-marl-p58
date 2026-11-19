@@ -47,6 +47,8 @@ def n_all_table(df: pd.DataFrame, eps: float, success_rate: float) -> pd.DataFra
                 "method": method, "n": n, "instance_seed": inst,
                 "N_all": float(best["n_samples"]) if best is not None else np.nan,
                 "budget": ", ".join(f"{k}={int(best[k])}" for k in keys) if best is not None else "",
+                # K = 1 learns nothing (output = uniform policy): such an instance is trivial.
+                "trivial": best is not None and "K" in keys and int(best["K"]) == 1,
             })
     return pd.DataFrame(rows)
 
@@ -61,6 +63,7 @@ def summarize(table: pd.DataFrame) -> pd.DataFrame:
             "median": float(vals.median()) if len(vals) else np.nan,
             "min": float(vals.min()) if len(vals) else np.nan,
             "max": float(vals.max()) if len(vals) else np.nan,
+            "solved_by_K1": int(g["trivial"].sum()) if method == "robust_q_ftrl" else "",
             "typical_budget": g["budget"].mode().iloc[0] if (g["budget"] != "").any() else "",
         })
     return pd.DataFrame(out)

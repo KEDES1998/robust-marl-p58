@@ -5,8 +5,8 @@ member's part does, why it matters, its current status and the open points. Sect
 gives an overview of the whole project, written so that anyone can follow it without
 having read the paper in detail.
 
-Last updated: 14 Nov 2026 (Section 3: Robust-Q-FTRL implemented and its F1 sweep compared
-with the plug-in sweep). Section 1 reflects the state of commit `5119c72` (8 Nov 2026).
+Last updated: 19 Nov 2026 (Section 3: Robust-Q-FTRL on F1 compared with the plug-in sweep;
+K = 1 added to show where F1 is trivial). Section 1 reflects the state of commit `5119c72` (8 Nov 2026).
 
 ---
 
@@ -622,7 +622,7 @@ _To be filled in by Tiago._
 Responsibilities (from the README): Robust-Q-FTRL (`run`), TV worst case in dual form (Eq. 19),
 Robust-Q-FTRL runs; Overleaf: method section on the algorithm.
 
-### 3.1 Current status (14 Nov 2026, not yet committed)
+### 3.1 Current status (19 Nov 2026)
 
 - `robust.py`: `tv_worst_case_dual` (Eq. 19) implemented; `test_greedy_equals_dual` passes on
   1000 random vectors.
@@ -634,10 +634,14 @@ Robust-Q-FTRL runs; Overleaf: method section on the algorithm.
 - New: config `experiments/configs/scaling_n_f1_rq.yaml`, analysis script
   `experiments/analyze_scaling.py`, 6 new tests in `tests/test_robust_q_ftrl.py`.
 - First Robust-Q-FTRL sweep on F1 done (Section 3.5) and compared with Kevin's plug-in sweep.
+- $K = 1$ added to the grid as a triviality marker (Section 3.6): config
+  `scaling_n_f1_rq.yaml` now has $K \in \lbrace 1, 32, \dots, 2048 \rbrace$; `run_scaling.py`
+  got the override `--K`; `analyze_scaling.py` reports per $n$ how many instances are already
+  solved at $K = 1$ (column `solved_by_K1`).
 
 Game family F2 was **not** implemented (decision: stay with F1 for now).
 
-`pytest`: 63 tests, 62 passed, 1 skipped (F2), 0 failed.
+`pytest`: 64 tests, 63 passed, 1 skipped (F2), 0 failed.
 
 ### 3.2 Log
 
@@ -645,6 +649,7 @@ Game family F2 was **not** implemented (decision: stay with F1 for now).
 |---|---|---|
 | 14 Nov | `tv_worst_case_dual`, `robust_q_ftrl.run`, 6 new tests, `c_b` in `run_scaling.py` | 62 passed, 1 skipped |
 | 14 Nov | Robust-Q-FTRL sweep on F1 (`results/scaling_n_f1_rq/20261114-114125`), 9800 runs, 1 h 32 min with 8 processes | – |
+| 19 Nov | $K = 1$ in the grid, `--K` override, `test_K1_returns_the_uniform_policy`; $K = 1$ sweep on F1 (`results/scaling_n_f1_rq/20261119-101535`), 1400 runs, 6 s | 63 passed, 1 skipped |
 
 ### 3.3 Implementation
 
@@ -805,7 +810,60 @@ Slope fits over all $n$ ($\varepsilon = 0.1$): plug-in $\log_2 N_{\text{all}}$ a
 slope 0.96, a factor 1.94 per extra agent (exponential, as in Section 1.9). Robust-Q-FTRL has
 slope $-0.41$; the fit is meaningless because of the F1 effect described next.
 
-### 3.6 Interpretation: is the curse of multiagency broken?
+### 3.6 $K = 1$: showing where F1 is trivial
+
+**What $K = 1$ does.** With $K = 1$, $\log K = 0$, so the FTRL rate is
+$\eta = \sqrt{\log K / (\alpha_1 H)} = 0$ and the output mixture is the single plan $\pi^1$, the
+uniform policy, with weight 1. The $N$ samples per $(s, a_i)$ are drawn and counted
+($18 \cdot N \cdot n$ samples) but only reach the value estimates $V$, which the output never
+uses. A $K = 1$ run therefore **learns nothing**: its gap is the gap of the uniform policy
+(`test_K1_returns_the_uniform_policy`). It is in the grid only to make visible for which $n$ F1
+needs no learning.
+
+Run (1400 runs, 6 s; analysed together with the run of 14 Nov):
+
+```
+python experiments/run_scaling.py experiments/configs/scaling_n_f1_rq.yaml --methods robust_q_ftrl --K 1 --workers 8
+```
+
+**Mean `gap_out` at $K = 1$** (identical for $N = 1$ and $N = 4$, and identical to the
+uniform-policy gaps of Section 1.9, an independent check):
+
+| $n$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| mean `gap_out` | 0.269 | 0.207 | 0.163 | 0.110 | 0.081 | 0.060 | 0.042 |
+| instances solved at $K = 1$, $\varepsilon = 0.1$ | 0/10 | 0/10 | 0/10 | 3/10 | 9/10 | 10/10 | 10/10 |
+| instances solved at $K = 1$, $\varepsilon = 0.05$ | 0/10 | 0/10 | 0/10 | 0/10 | 0/10 | 1/10 | 9/10 |
+
+**$N_{\text{all}}$ of Robust-Q-FTRL with $K = 1$ in the grid** (geometric mean over instances;
+plug-in unchanged, see Section 3.5):
+
+| $n$ | $\varepsilon = 0.1$ | $\varepsilon = 0.05$ |
+|---|---|---|
+| 2 | 12,161 ($K = 256$) | 59,886 ($K = 1024$) |
+| 3 | 18,241 ($K = 256$) | 63,518 ($K = 1024$) |
+| 4 | 26,067 ($K = 256$) | 104,267 ($K = 1024$) |
+| 5 | 2,036 (3 of 10 at $K = 1$) | 211,728 ($K = 2048$) |
+| 6 | 153 (9 of 10 at $K = 1$) | 179,657 ($K = 2048$) |
+| 7 | 126 (all at $K = 1$) | 74,105 (1 of 10 at $K = 1$) |
+| 8 | 144 (all at $K = 1$) | 269 (9 of 10 at $K = 1$) |
+
+Plots: `results/scaling_n_f1_rq/20261119-101535/n_all_f1_eps0.1.png` and
+`n_all_f1_eps0.05.png` in the same folder. Reproduce with
+
+```
+python experiments/analyze_scaling.py results/scaling_n/20261108-133521/runs.csv results/scaling_n_f1_rq/20261114-114125/runs.csv results/scaling_n_f1_rq/20261119-101535/runs.csv --eps 0.1 --plot n_all.png
+```
+
+Reading: at $\varepsilon = 0.1$ the Robust-Q-FTRL curve drops by two orders of magnitude between
+$n = 4$ and $n = 6$, down to $18 \cdot n$ samples, the cost of evaluating the uniform policy. This
+is the F1 triviality made visible, not learning: from $n = 6$ on, the uniform policy already is an
+$\varepsilon$-robust CCE. The plug-in method cannot take this shortcut (it always queries all
+$2^n$ joint actions and solves the estimated game), so its curve keeps doubling. For the report,
+points with `solved_by_K1` > 0 should be marked or left out of any slope fit; the informative
+range is $n \le 4$ at $\varepsilon = 0.1$ and $n \le 6$ at $\varepsilon = 0.05$.
+
+### 3.7 Interpretation: is the curse of multiagency broken?
 
 **Yes for the shape, with two caveats.**
 
@@ -824,7 +882,8 @@ What the data show:
 Caveat 1, **F1 becomes trivial for $n \ge 5$–6** (Section 1.9: the uniform policy already has
 gap $\le 0.1$ in 90–100 % of the instances). Robust-Q-FTRL exploits this: it starts from the
 uniform policy, and from $n = 5$ the smallest grid value $K = 32$ already succeeds, so
-$N_{\text{all}} = 576\,n$ there is the grid minimum, not a measured requirement. That Robust-Q-FTRL
+$N_{\text{all}} = 576\,n$ there is the grid minimum, not a measured requirement. With $K = 1$ in
+the grid (Section 3.6) it drops further to $18\,n$, confirming that no learning is needed there. That Robust-Q-FTRL
 becomes cheaper than the plug-in method from $n = 6$ on (3,456 vs 3,743 at $n = 6$; 4,608 vs 9,216
 at $n = 8$) is therefore real but says little about learning. The informative range is
 $n = 2, \dots, 4$ (and up to 7 for $\varepsilon = 0.05$, where the triviality sets in later).
@@ -842,10 +901,11 @@ consistent with the data: the per-agent budget $(K, N)$ is independent of $n$ wh
 cost doubles per agent. In absolute numbers and for $n \le 8$ on F1, the plug-in method is cheaper
 whenever the game is not trivial.
 
-### 3.7 Open points (Timon)
+### 3.8 Open points (Timon)
 
-- Commit the implementation (branch from `develop`) and hand
-  `results/scaling_n_f1_rq/20261114-114125/runs.csv` to Tiago (same CSV format as Section 1.4).
+- Hand `results/scaling_n_f1_rq/20261114-114125/runs.csv` and
+  `results/scaling_n_f1_rq/20261119-101535/runs.csv` ($K = 1$) to Tiago (same CSV format as
+  Section 1.4); points with instances solved at $K = 1$ should be marked in the plots.
 - Group decision: is the F1 evidence ($n = 2, \dots, 4$ informative) enough, or do we need a game
   in which a single agent keeps mattering for large $n$ (Section 1.9, options 1–3)? Without it the
   predicted crossover at $n \approx 10$ cannot be shown.
