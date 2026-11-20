@@ -40,17 +40,19 @@ eta_{k+1} = sqrt( log K / (alpha_k H) )              Eq. (22)
 alpha^K_k = alpha_k ∏_{j>k} (1 − alpha_j)            Eq. (24); sums to 1
 ```
 
-A larger c_α keeps more weight on the early plans, which were computed while the policies
-were still near uniform. With the paper's c_α = 24, the floor at K = 2000 is 0.10–0.12. That
-is why we use c_α = 1 ([deviations.md](../5_deviations/deviations.md)).
+A larger c_α keeps α_k close to 1 for longer: the output mixture averages over fewer, later
+plans and the step size η is smaller. With the paper's c_α = 24 the floor is far higher (n = 3:
+0.145 at K = 1000, 0.095 at K = 4000, versus 0.039 and 0.014 for c_α = 1), and ε = 0.05 needs
+K ≥ 16000. That is why we use c_α = 1 ([c_alpha_floor.md](../4_experiments/c_alpha_floor.md),
+[deviations.md](../5_deviations/deviations.md)).
 
 ## Solver floor on F1
 
-`gap` on the true model, K = 2000, c_α = 1, 10 instances per n:
+`gap` on the true model, K = 2000, c_α = 1, 10 instances per n, mean (max):
 
-| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|
-| mean | 0.022 | 0.024 | 0.025 | 0.029 | 0.030 | 0.031 | 0.029 |
-| max | 0.028 | 0.031 | 0.032 | 0.033 | 0.035 | 0.035 | 0.034 |
+| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|
+| setting A (β = 1, w = 0.5) | 0.022 (0.028) | 0.024 (0.031) | 0.025 (0.032) | 0.029 (0.032) | 0.030 (0.035) | 0.031 (0.035) | 0.029 (0.034) | 0.025 (0.029) |
+| setting B (β = 0.1, w = 0) | 0.018 (0.027) | 0.016 (0.026) | 0.022 (0.026) | 0.024 (0.030) | 0.027 (0.031) | 0.030 (0.036) | 0.032 (0.038) | 0.032 (0.037) |
 
-ε = 0.1 lies clearly above the floor for every n.
+Both ε = 0.1 and ε = 0.05 lie above the floor for every n.

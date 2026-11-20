@@ -26,6 +26,7 @@ Robust Multi-Agent RL*, claim C1: Robust-Q-FTRL needs a number of samples that g
 
 - [C1: sample complexity versus the number of agents](4_experiments/scaling_in_n.md)
 - [Triviality check: where F1 needs no learning](4_experiments/triviality_check.md)
+- [Solver floor versus c_α and K](4_experiments/c_alpha_floor.md)
 
 ## 5. Deviations from the paper
 

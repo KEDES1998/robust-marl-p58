@@ -22,8 +22,9 @@ structure across agents.
 
 `random_game(n, S, H, A, seed, beta=1.0, w=0.5)` uses `rng = np.random.default_rng(seed)`:
 
-1. **Transitions:** `P[h, s, a, :] ~ Dirichlet(beta · 1_S)`, drawn independently for every (h, s, a) with β = 1.
+1. **Transitions:** `P[h, s, a, :] ~ Dirichlet(beta · 1_S)`, drawn independently for every (h, s, a).
 2. **State quality:** `g = linspace(0, 1, S)`. For S = 3 this gives g = (0, 0.5, 1).
-3. **Rewards:** `R[i, h, s, a] = w · g(s) + (1 − w) · u`, where `u ~ Unif[0, 1]` independently for every (i, h, s, a) with w = 0.5.
+3. **Rewards:** `R[i, h, s, a] = w · g(s) + (1 − w) · u`, where `u ~ Unif[0, 1]` independently for every (i, h, s, a).
 
-The shared g(s) part makes some states clearly better than others for every agent. Without it the agents would have little to exploit. The noise part makes each agent's incentives different.
+The shared g(s) part makes some states clearly better than others for every agent. The noise part makes each agent's incentives different. Small β gives peaked (nearly deterministic) transitions, large β flat ones.
+

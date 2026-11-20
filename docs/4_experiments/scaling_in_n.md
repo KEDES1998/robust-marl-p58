@@ -10,7 +10,7 @@ Theorem 2 says Robust-Q-FTRL finds an ε-robust CCE with a number of samples tha
 > joint action)?
 
 Two sub-questions from the README: does N = 1 sample per iteration suffice in practice, and
-does a larger σ need fewer samples (not run yet, see [planned.md](planned.md))?
+does a larger σ need fewer samples (not run yet)?
 
 ## Hypotheses
 
@@ -22,9 +22,20 @@ does a larger σ need fewer samples (not run yet, see [planned.md](planned.md))?
 ## Design
 
 **Held fixed:** game family F1 ([game_F1.md](../2_environment/game_F1.md)), S = 3 states,
-H = 3 steps, A = 2 actions per agent, β = 1, w = 0.5, σ = 0.3, c_α = 1, c_b = 0, success rate 90 %.
+H = 3 steps, A = 2 actions per agent, σ = 0.3, c_α = 1, c_b = 0, success rate 90 %.
 
-**Varied:** n = 2, 3, …, 8.
+**Two settings of F1** (same code, different generator parameters):
+
+| Setting | β (Dirichlet) | w (state term) | Config | Results |
+|---|---|---|---|---|
+| **A** | 1.0 | 0.5 | `scaling_n.yaml` with `beta: 1.0`, `w: 0.5` | `results/scaling_n/20261119-202618/` |
+| **B** | 0.1 | 0 | `experiments/configs/scaling_n.yaml` | `results/scaling_n/20261119-213140/` |
+
+Setting B has peaked transitions (small β) and pure-noise rewards (w = 0). A single agent
+matters more: the gap of the uniform policy is about 1.65× larger than in A for the same n
+([F1_triviality.md](../2_environment/F1_triviality.md)), so F1 stays non-trivial up to larger n.
+
+**Varied:** n = 2, 3, …, 9.
 
 **Repetitions:**
 - **10 game instances per n:** independent random games, so results aren't tied to one game;
@@ -32,10 +43,11 @@ H = 3 steps, A = 2 actions per agent, β = 1, w = 0.5, σ = 0.3, c_α = 1, c_b =
 
 **Budgets** (doubling grids):
 - plug-in: m = 1, 2, 4, …, 128 samples per joint action, solved with K = 2000
-- Robust-Q-FTRL: N ∈ {1, 4}, K ∈ {1, 32, 64, …, 2048}
+- Robust-Q-FTRL: N ∈ {1, 4}, K ∈ {1, 32, 64, …, 2048}. K = 1 outputs the uniform policy and
+  marks instances that need no learning ([triviality_check.md](triviality_check.md)).
 - exact solver on the true model (K = 2000, no samples): the floor no method can beat.
 
-**Targets:** ε = 0.1 (main) and ε = 0.05.
+**Targets:** ε = 0.1 and ε = 0.05.
 
 ## Procedure
 
@@ -50,79 +62,129 @@ H = 3 steps, A = 2 actions per agent, β = 1, w = 0.5, σ = 0.3, c_α = 1, c_b =
 
 ### Solver floor
 
-The mean gap of the exact solver on the true model rises slightly with n, from 0.022 (n = 2)
-to 0.031 (n = 7). The maximum is 0.035. Both targets are reachable for every n.
+Mean (max) gap of the exact solver on the true model, 10 instances per n:
 
-### N_all(ε)
+| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|
+| A | 0.022 (0.028) | 0.024 (0.031) | 0.025 (0.032) | 0.029 (0.032) | 0.030 (0.035) | 0.031 (0.035) | 0.029 (0.034) | 0.025 (0.029) |
+| B | 0.018 (0.027) | 0.016 (0.026) | 0.022 (0.026) | 0.024 (0.030) | 0.027 (0.031) | 0.030 (0.036) | 0.032 (0.038) | 0.032 (0.037) |
 
-Geometric mean over 10 instances, with the typical budget in brackets. All 70 instances were
-solved by both methods at both ε.
+Both targets are reachable for every n in both settings.
+
+### Where F1 is trivial
+
+Instances (of 10) already solved by the uniform policy (Robust-Q-FTRL with K = 1):
+
+| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|
+| A, ε = 0.1 | 0 | 0 | 0 | 3 | 9 | 10 | 10 | 10 |
+| A, ε = 0.05 | 0 | 0 | 0 | 0 | 0 | 1 | 9 | 10 |
+| B, ε = 0.1 | 0 | 0 | 0 | 0 | 0 | 8 | 10 | 10 |
+| B, ε = 0.05 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 4 |
+
+**Informative range** (no instance solved at K = 1): A: n = 2–4 (ε = 0.1), n = 2–6
+(ε = 0.05). B: n = 2–6 (ε = 0.1), n = 2–7 (ε = 0.05).
+
+### N_all(ε), setting A
 
 | n | plug-in, ε = 0.1 | Robust-Q-FTRL, ε = 0.1 | plug-in, ε = 0.05 | Robust-Q-FTRL, ε = 0.05 |
 |---|---|---|---|---|
 | 2 | 177 (m = 8) | 12,161 (K = 256) | 709 (m = 32) | 59,886 (K = 1024) |
 | 3 | 501 (m = 8) | 18,241 (K = 256) | 1,871 (m = 32) | 63,518 (K = 1024) |
 | 4 | 1,003 (m = 8) | 26,067 (K = 256) | 2,469 (m = 16) | 104,267 (K = 1024) |
-| 5 | 1,746 (m = 8) | 5,760 (K = 32) | 6,984 (m = 32) | 211,728 (K = 2048) |
-| 6 | 3,743 (m = 8) | 3,456 (K = 32) | 10,586 (m = 16) | 179,657 (K = 2048) |
-| 7 | 7,486 (m = 8) | 4,032 (K = 32) | 22,692 (m = 16) | 120,384 (K = 2048) |
-| 8 | 9,216 (m = 4) | 4,608 (K = 32) | 17,198 (m = 8) | 6,080 (K = 32) |
+| 5 | *1,746 (m = 8)* | *2,036 (3 of 10 at K = 1)* | 6,984 (m = 32) | 211,728 (K = 2048) |
+| 6 | *3,743 (m = 8)* | *153 (9 of 10 at K = 1)* | 10,586 (m = 16) | 179,657 (K = 2048) |
+| 7 | *7,486 (m = 8)* | *126 (all at K = 1)* | *22,692 (m = 16)* | *74,105 (1 of 10 at K = 1)* |
+| 8 | *9,216 (m = 4)* | *144 (all at K = 1)* | *17,198 (m = 8)* | *269 (9 of 10 at K = 1)* |
+| 9 | *7,486 (m = 2)* | *162 (all at K = 1)* | *14,971 (m = 4)* | *162 (all at K = 1)* |
 
-These columns come from the sweep without K = 1. With K = 1 in the grid, Robust-Q-FTRL drops
-to about 18·n samples where the uniform policy already suffices ([triviality_check.md](triviality_check.md)).
-All Robust-Q-FTRL budgets have N = 1.
+For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
+
+### N_all(ε), setting B (main)
+
+Geometric mean over 10 instances, typical (median) budget in brackets. All instances were
+solved by both methods at both ε. Rows in *italics* are in the trivial range.
+
+| n | plug-in, ε = 0.1 | Robust-Q-FTRL, ε = 0.1 | plug-in, ε = 0.05 | Robust-Q-FTRL, ε = 0.05 |
+|---|---|---|---|---|
+| 2 | 72 (m = 4) | 13,033 (K = 256) | 144 (m = 8) | 55,875 (K = 1024–2048) |
+| 3 | 165 (m = 2) | 24,069 (K = 512) | 269 (m = 4) | 63,518 (K = 1024) |
+| 4 | 165 (m = 1) | 36,864 (K = 512) | 437 (m = 2) | 111,751 (K = 2048) |
+| 5 | 380 (m = 2) | 40,115 (K = 512) | 873 (m = 4) | 171,977 (K = 2048) |
+| 6 | 617 (m = 1) | 44,914 (K = 512) | 1,152 (m = 2) | 312,801 (K = 2048) |
+| 7 | *1,235 (m = 1)* | *333 (8 of 10 at K = 1)* | 1,746 (m = 2) | 317,694 (K = 2048) |
+| 8 | *2,304 (m = 1)* | *144 (all at K = 1)* | *2,304 (m = 1)* | *128,368 (1 of 10 at K = 1)* |
+| 9 | *4,608 (m = 1)* | *162 (all at K = 1)* | *4,608 (m = 1)* | *7,857 (4 of 10 at K = 1)* |
+
+All Robust-Q-FTRL budgets at the median have N = 1 except n = 2, ε = 0.05.
+
+### N_all(ε), setting A
+
+| n | plug-in, ε = 0.1 | Robust-Q-FTRL, ε = 0.1 | plug-in, ε = 0.05 | Robust-Q-FTRL, ε = 0.05 |
+|---|---|---|---|---|
+| 2 | 177 (m = 8) | 12,161 (K = 256) | 709 (m = 32) | 59,886 (K = 1024) |
+| 3 | 501 (m = 8) | 18,241 (K = 256) | 1,871 (m = 32) | 63,518 (K = 1024) |
+| 4 | 1,003 (m = 8) | 26,067 (K = 256) | 2,469 (m = 16) | 104,267 (K = 1024) |
+| 5 | *1,746 (m = 8)* | *2,036 (3 of 10 at K = 1)* | 6,984 (m = 32) | 211,728 (K = 2048) |
+| 6 | *3,743 (m = 8)* | *153 (9 of 10 at K = 1)* | 10,586 (m = 16) | 179,657 (K = 2048) |
+| 7 | *7,486 (m = 8)* | *126 (all at K = 1)* | *22,692 (m = 16)* | *74,105 (1 of 10 at K = 1)* |
+| 8 | *9,216 (m = 4)* | *144 (all at K = 1)* | *17,198 (m = 8)* | *269 (9 of 10 at K = 1)* |
+| 9 | *7,486 (m = 2)* | *162 (all at K = 1)* | *14,971 (m = 4)* | *162 (all at K = 1)* |
+
+For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
+
+### Growth-rate fits on the informative range
+
+Fits on the geometric means. Semi-log: factor per extra agent (2 = exponential in n with A = 2).
+Log-log: exponent of n (1 = linear).
+
+| Setting, ε, range | plug-in: factor per agent | Robust-Q-FTRL: log-log exponent |
+|---|---|---|
+| A, 0.1, n = 2–4 | ×2.38 | 1.09 |
+| B, 0.1, n = 2–6 | ×1.67 | 1.14 |
+| B, 0.05, n = 2–7 | ×1.65 | 1.57 |
+
+Fits over all n (as printed by `analyze_scaling.py`) are meaningless for Robust-Q-FTRL
+because of the trivial range (slopes −1.2 or below, except B at ε = 0.05: −0.11).
 
 ### What the numbers show
 
-- **Plug-in grows exponentially.** It needs about m ≈ 8 samples per joint action for every n,
-  so its cost doubles per agent. The semi-log slope is 0.96 over all n (×1.94 per agent) and
-  1.01 for n = 2–5.
-- **Robust-Q-FTRL's per-agent budget doesn't grow with n.** At ε = 0.1 it needs K = 256 for
-  n = 2–4, then less. Its cost therefore grows only through Σᵢ Aᵢ = 2n: ×2.1 from n = 2 to 4,
-  while plug-in grows ×5.7.
-- **N = 1 suffices.** N = 4 lowers the gap by at most 0.01 at 4× the cost. The gap is limited by
-  the number of FTRL iterations K, not by the samples per iteration.
-- **Robust-Q-FTRL is far more expensive in absolute terms.** For n ≤ 4 it needs 26–69× more
-  samples at ε = 0.1 (34–84× at ε = 0.05). Plug-in gets its 2000 solver iterations free on the
-  estimated model, while Robust-Q-FTRL pays for every iteration.
+- **Plug-in grows exponentially.** In A it needs m ≈ 8 per joint action for every n, so its
+  cost doubles per agent. In B the transitions are nearly deterministic: from n ≈ 6 a single
+  sample per joint action (m = 1) suffices, and the plug-in cost is the floor 9·2ⁿ of any
+  joint-action method. The fitted factor per agent is below 2 in B because m* falls from 4 to
+  1 over the informative range; once m = 1, the cost doubles exactly.
+- **Robust-Q-FTRL's per-agent budget doesn't grow with n.** In B at ε = 0.1 it needs K = 512
+  (N = 1) for every n from 3 to 6, so N_all = 18·512·n grows linearly (log-log exponent 1.14).
+  At ε = 0.05 it needs K = 2048 from n = 4 to 7 (and at n = 8 for 9 of 10 instances); the
+  higher exponent (1.57) comes from the step K = 1024 → 2048 between n = 3 and 4.
+- **Robust-Q-FTRL is far more expensive in absolute terms.** In the informative range it needs
+  73–223× more samples than plug-in in B at ε = 0.1 (182–388× at ε = 0.05) and 26–69× in A
+  at ε = 0.1. Plug-in gets its 2000
+  solver iterations free on the estimated model, while Robust-Q-FTRL pays for every
+  iteration. The gap is larger in B because plug-in gets away with m = 1 there.
 
 ## Interpretation
 
-**The shape of the claim holds; the absolute advantage can't be shown on F1.**
+**The shape of the claim holds; the absolute advantage can't be shown on F1 for n ≤ 9.**
 
-- Consistent with Theorem 2: the per-agent budget is independent of n, and the cost has no 2ⁿ term.
-- From n ≈ 5 on (ε = 0.1), F1 is trivial: the uniform policy already has gap ≤ ε. Robust-Q-FTRL
-  then succeeds at its smallest budget, and its slope fit (−0.41) is meaningless. Only
-  **n = 2–4** at ε = 0.1, and n ≤ 6 at ε = 0.05, are informative ([F1_triviality.md](../2_environment/F1_triviality.md)).
-- Extrapolating the informative range (plug-in ≈ 9·8·2ⁿ, Robust-Q-FTRL ≈ 18·256·n at ε = 0.1),
-  the curves would cross at about n ≈ 10. On F1 this can't be measured.
+- Consistent with Theorem 2: the per-agent budget (K, N) is independent of n, and the cost has
+  no 2ⁿ term. Setting B confirms this over five values of n (2–6) instead of three.
+- Above the informative range F1 is trivial: the uniform policy already has gap ≤ ε, and
+  Robust-Q-FTRL's N_all collapses to 18·n (the K = 1 cost).
 
 ## Duration
 
-Measured on one machine with 8 parallel processes. Run times include the exact gap evaluation.
+8 parallel processes, run times include the exact gap evaluation (Python 3.14, numpy 2.5).
 
 | Sweep | Runs | Wall time | Compute time |
 |---|---|---|---|
-| plug-in + solver floor | 5,670 | 1 h 27 min | 11.6 h |
-| Robust-Q-FTRL (K ≥ 32) | 9,800 | 1 h 32 min | 12.3 h |
-| Robust-Q-FTRL, K = 1 only | 1,400 | 6 s | < 1 min |
+| Setting A, all methods | 19,280 | 32 min | 4.2 h |
+| Setting B, all methods | 19,280 | 31 min | 4.1 h |
 
-Mean time per run (seconds):
+Mean time per run (seconds, setting A; B is within 0.4 s):
 
-| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|
-| plug-in (any m) | 2.1 | 3.2 | 4.5 | 6.2 | 8.7 | 11.3 | 15.5 |
-| Robust-Q-FTRL (average over the grid) | 1.8 | 2.4 | 3.2 | 4.5 | 4.9 | 6.5 | 8.4 |
-
-- **Plug-in** time is dominated by the 2000 solver iterations on the estimated game, which
-  has 2ⁿ joint actions. It grows about ×1.4 per agent and doesn't depend on m (15.5 s at
-  n = 8 for every m from 1 to 128).
-- **Robust-Q-FTRL** time grows linearly in K: at n = 8 it goes from 0.5 s (K = 32) to 30 s
-  (K = 2048). It grows only mildly in n.
-- Wall-clock time is not the quantity under test. The claim is about samples. Still, it shows
-  the same pattern: the cost of the joint-action method grows exponentially in n.
-
-## Threats to validity
-
-- **Few informative points:** three values of n at ε = 0.1 are thin evidence for a growth rate.
-- **Outside Theorem 2's conditions:** c_α = 1 instead of ≥ 24, and c_b = 0 ([deviations.md](../5_deviations/deviations.md)).
+| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|
+| plug-in (any m) | 0.4 | 0.6 | 0.9 | 1.1 | 1.5 | 2.0 | 2.8 | 4.6 |
+| Robust-Q-FTRL (average over the grid) | 0.1 | 0.1 | 0.2 | 0.2 | 0.3 | 0.4 | 0.5 | 0.7 |

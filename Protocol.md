@@ -5,8 +5,14 @@ member's part does, why it matters, its current status and the open points. Sect
 gives an overview of the whole project, written so that anyone can follow it without
 having read the paper in detail.
 
-Last updated: 19 Nov 2026 (Section 3: Robust-Q-FTRL on F1 compared with the plug-in sweep;
-K = 1 added to show where F1 is trivial). Section 1 reflects the state of commit `5119c72` (8 Nov 2026).
+Last updated: 20 Nov 2026 (Section 3.9: second F1 setting β = 0.1, w = 0, sweeps extended to
+n = 9; Section 3.10: solver floor versus c_α). Section 1 reflects the state of commit `5119c72` (8 Nov 2026).
+
+**Note on result paths.** The folders `results/scaling_n_f1_rq/…` and
+`results/scaling_n/20261108-…`, `20261119-102118` named in Sections 1 and 3.1–3.8 were
+replaced by `results/scaling_n/20261119-202618` (setting A, n = 2–9), which reproduces their
+N_all tables and mean gaps for n = 2–8 exactly. The config `scaling_n_f1_rq.yaml` is now
+`scaling_n.yaml`. Current results are documented in [docs/](docs/README.md).
 
 ---
 
@@ -642,9 +648,13 @@ Robust-Q-FTRL runs; Overleaf: method section on the algorithm.
   one folder, `results/scaling_n_f1_rq/20261119-102118`; it reproduces the earlier three runs row by row (all
   tables in Sections 3.5–3.6 come from it).
 
+- 19–20 Nov: F1 parameters β and w configurable (`run_scaling.py`, `f1_triviality.py`); both
+  sweeps rerun for n = 2–9 in two settings (Section 3.9); new experiment
+  `experiments/c_alpha_solver_floor.py` with config `c_alpha_floor.yaml` (Section 3.10).
+
 Game family F2 was **not** implemented (decision: stay with F1 for now).
 
-`pytest`: 64 tests, 63 passed, 1 skipped (F2), 0 failed.
+`pytest` (20 Nov): 67 tests, 66 passed, 1 skipped (F2), 0 failed.
 
 ### 3.2 Log
 
@@ -654,6 +664,9 @@ Game family F2 was **not** implemented (decision: stay with F1 for now).
 | 14 Nov | Robust-Q-FTRL sweep on F1 (`results/scaling_n_f1_rq/20261114-114125`), 9800 runs, 1 h 32 min with 8 processes | – |
 | 19 Nov | $K = 1$ in the grid, `--K` override, `test_K1_returns_the_uniform_policy`; $K = 1$ sweep on F1 (`results/scaling_n_f1_rq/20261119-101535`), 1400 runs, 6 s | 63 passed, 1 skipped |
 | 19 Nov | Complete rerun, all three methods, full grid (`results/scaling_n_f1_rq/20261119-102118`), 16,870 runs, 5 h 12 min with 8 processes; identical to the earlier runs (max. difference in `gap_out` $10^{-13}$ for exact and plug-in, 0 for Robust-Q-FTRL) | – |
+| 19 Nov | `beta` and `w` in the config; setting A ($\beta = 1$, $w = 0.5$), $n = 2, \dots, 9$ (`results/scaling_n/20261119-202618`), 19,280 runs, 32 min with 8 processes | – |
+| 19 Nov | setting B ($\beta = 0.1$, $w = 0$), $n = 2, \dots, 9$ (`results/scaling_n/20261119-213140`), 19,280 runs, 31 min; now the default in `scaling_n.yaml` | – |
+| 20 Nov | `c_alpha_solver_floor.py`, 3 new tests; floor for $c_\alpha \in \lbrace 0.5, 1, 4, 24 \rbrace$, $K$ up to 32,000 (`results/c_alpha_floor/20261120-082743`), 200 runs, 1.5 min | 66 passed, 1 skipped |
 
 ### 3.3 Implementation
 
@@ -908,15 +921,68 @@ whenever the game is not trivial.
 
 ### 3.8 Open points (Timon)
 
-- Hand `results/scaling_n_f1_rq/20261119-102118/runs.csv` (all three methods, $K = 1$ included) to Tiago
-  (same CSV format as Section 1.4); points with instances solved at $K = 1$ should be marked in
-  the plots.
-- Group decision: is the F1 evidence ($n = 2, \dots, 4$ informative) enough, or do we need a game
-  in which a single agent keeps mattering for large $n$ (Section 1.9, options 1–3)? Without it the
-  predicted crossover at $n \approx 10$ cannot be shown.
-- Optional: run with $c_\alpha = 24$ (faithful to Theorem 2) and a larger $K$ grid; and a sweep over
-  $\sigma$ (README sub-question "does a larger $\sigma$ need fewer samples?").
-- Overleaf: method section (Algorithms 1–2, dual form, why $N = 1$ and $c_b = 0$ in practice).
+Updated 20 Nov (after Sections 3.9 and 3.10).
+
+- Hand `results/scaling_n/20261119-213140/runs.csv` (setting B, main) and
+  `results/scaling_n/20261119-202618/runs.csv` (setting A) to Tiago (same CSV format as
+  Section 1.4, plus the columns `beta` and `w`); points with instances solved at $K = 1$ should
+  be marked in the plots.
+- Group decision: setting B gives five informative values of $n$ at $\varepsilon = 0.1$ (six at
+  $0.05$). Is that enough, or do we still need a game in which a single agent keeps mattering
+  for large $n$ (Section 1.9, options 1–3)? On F1 the predicted crossover ($n \approx 14$–16 in
+  setting B) cannot be shown.
+- Optional: run Robust-Q-FTRL with $c_\alpha = 24$ (faithful to Theorem 2); Section 3.10 shows it
+  needs $K \ge 16{,}000$ for $\varepsilon = 0.05$. And a sweep over $\sigma$ (README
+  sub-question "does a larger $\sigma$ need fewer samples?").
+- Overleaf: method section (Algorithms 1–2, dual form, why $N = 1$, $c_b = 0$ and $c_\alpha = 1$
+  in practice).
+
+### 3.9 Second F1 setting and $n = 9$ (19 Nov)
+
+Both sweeps now run $n = 2, \dots, 9$ with all three methods and the full grid (Section 3.5).
+F1 has two new config keys, `beta` (Dirichlet concentration) and `w` (weight of $g(s)$ in the
+reward):
+
+- **Setting A** ($\beta = 1$, $w = 0.5$, as before): `results/scaling_n/20261119-202618`.
+  For $n = 2, \dots, 8$ it reproduces the tables of Sections 3.5–3.6 exactly. At $n = 9$ all
+  instances are trivial at both $\varepsilon$.
+- **Setting B** ($\beta = 0.1$, $w = 0$, now the config default): `results/scaling_n/20261119-213140`.
+  Peaked transitions and pure-noise rewards make a single agent matter more (uniform-policy gap
+  about 1.65× larger), so F1 becomes trivial about 1.5 agents later: informative range
+  $n = 2, \dots, 6$ at $\varepsilon = 0.1$ and $n = 2, \dots, 7$ at $\varepsilon = 0.05$.
+
+Results in setting B (details in [docs/4_experiments/scaling_in_n.md](docs/4_experiments/scaling_in_n.md)):
+
+- Robust-Q-FTRL needs $K = 512$, $N = 1$ for every $n = 3, \dots, 6$ at $\varepsilon = 0.1$, and
+  $K = 2048$ for $n = 4, \dots, 7$ at $\varepsilon = 0.05$. Log-log exponent of $N_{\text{all}}$
+  on the informative range: 1.14 ($\varepsilon = 0.1$), 1.57 ($\varepsilon = 0.05$), i.e.
+  roughly linear in $n$.
+- The plug-in method gets away with $m = 1$ from $n \approx 6$ on (nearly deterministic
+  transitions), so its cost is the floor $9 \cdot 2^n$ of any joint-action method; factor 1.67
+  per agent on $n = 2, \dots, 6$, exactly 2 once $m = 1$.
+- The absolute gap is larger than in setting A: Robust-Q-FTRL needs 73–223× more samples than
+  plug-in at $\varepsilon = 0.1$. Extrapolated crossover: $n \approx 14$ ($\varepsilon = 0.1$),
+  $n \approx 16$ ($\varepsilon = 0.05$).
+
+Runtimes dropped sharply compared with 14 Nov (32 min instead of 5 h 12 min for a comparable
+sweep, Python 3.14 and numpy 2.5): one plug-in run at $n = 8$ takes 2.8 s instead of 15.5 s.
+
+### 3.10 Solver floor versus $c_\alpha$ (20 Nov)
+
+New script `experiments/c_alpha_solver_floor.py` (config `c_alpha_floor.yaml`, 3 tests):
+`solve_exact` on the true model for $c_\alpha \in \lbrace 0.5, 1, 4, 24 \rbrace$ and
+$K \in \lbrace 1000, \dots, 32000 \rbrace$, F1 setting A, $n = 3$, 10 instances. Results in
+`results/c_alpha_floor/20261120-082743`, details in
+[docs/4_experiments/c_alpha_floor.md](docs/4_experiments/c_alpha_floor.md).
+
+- Mean floor at $K = 1000$: 0.027 ($c_\alpha = 0.5$), 0.039 (1), 0.080 (4), 0.145 (24). At
+  $K = 32000$: 0.002, 0.003, 0.007, 0.029.
+- With $c_\alpha = 24$, $\varepsilon = 0.05$ needs $K \ge 16000$ on every instance, 8× our grid
+  maximum; this extends the table of Section 1.8.
+- The explanation in Section 1.8 ("early plans keep a large weight") does not hold: for
+  $c_\alpha = 24$ the first half of the iterations gets weight below $10^{-40}$. The mixture instead
+  averages over few late plans (13 effective plans at $K = 1000$ versus 269 for $c_\alpha = 1$)
+  with a small step size ($\eta_K = 4.0$ versus 18.3).
 
 ---
 

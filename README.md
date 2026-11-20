@@ -40,7 +40,7 @@ Tue 10 Nov project session · 21 Nov main results for C1, report without abstrac
 | `src/rmg/robust_q_ftrl.py` | Robust-Q-FTRL (Algorithm 2) and exact solver | Timon (`run`), Ali (`solve_exact`) |
 | `experiments/` | configs and experiment scripts | runs: Kevin (baseline), Timon (Robust-Q-FTRL); statistics and plots: Tiago |
 | `tests/` | tests, including known-answer tests for the gap evaluation | all |
-| `results/` | raw data and plots, not in the repo | – |
+| `results/` | raw data, configs and plots of the runs the docs refer to | – |
 
 ## Interface (binding for everyone)
 
@@ -72,6 +72,15 @@ Run experiments through uv, for example:
 ```bash
 uv run python experiments/run_scaling.py experiments/configs/scaling_n.yaml --methods exact
 ```
+
+Main experiments (details and results in [docs/](docs/README.md)):
+
+| Experiment | Command | Results |
+|---|---|---|
+| C1, scaling in n (n = 2–9, all methods) | `uv run python experiments/run_scaling.py experiments/configs/scaling_n.yaml --workers 8` | `results/scaling_n/` |
+| N_all(ε), fits and plot | `uv run python experiments/analyze_scaling.py results/scaling_n/<ts>/runs.csv --eps 0.1 --plot n_all_f1_eps0.1.png` | printed |
+| F1 triviality (uniform policy) | `uv run python experiments/f1_triviality.py experiments/configs/scaling_n.yaml` | printed |
+| Solver floor versus c_α and K | `uv run python experiments/c_alpha_solver_floor.py experiments/configs/c_alpha_floor.yaml --workers 8 --plot` | `results/c_alpha_floor/` |
 
 Dependencies are declared in `pyproject.toml`; commit `uv.lock` when changing them.
 Use `uv add <package>` for runtime dependencies and `uv add --dev <package>` for
