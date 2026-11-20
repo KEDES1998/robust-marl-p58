@@ -175,16 +175,9 @@ because of the trivial range (slopes −1.2 or below, except B at ε = 0.05: −
 
 ## Duration
 
-8 parallel processes, run times include the exact gap evaluation (Python 3.14, numpy 2.5).
+8 parallel processes run times on MacBook Pro.
 
 | Sweep | Runs | Wall time | Compute time |
 |---|---|---|---|
 | Setting A, all methods | 19,280 | 32 min | 4.2 h |
 | Setting B, all methods | 19,280 | 31 min | 4.1 h |
-
-Mean time per run (seconds, setting A; B is within 0.4 s):
-
-| n | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-|---|---|---|---|---|---|---|---|---|
-| plug-in (any m) | 0.4 | 0.6 | 0.9 | 1.1 | 1.5 | 2.0 | 2.8 | 4.6 |
-| Robust-Q-FTRL (average over the grid) | 0.1 | 0.1 | 0.2 | 0.2 | 0.3 | 0.4 | 0.5 | 0.7 |
