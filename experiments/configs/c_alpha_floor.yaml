@@ -13,4 +13,4 @@ epsilon: 0.05   # only for the summary (share of instances with gap <= epsilon)
 n_instances: 10
 
 c_alpha: [0.5, 1, 4, 24]   # the paper needs c_alpha >= 24, the sweeps use 1
-K: [1000, 4000, 8000, 16000]
+K: [1000, 4000, 8000, 16000, 32000]
