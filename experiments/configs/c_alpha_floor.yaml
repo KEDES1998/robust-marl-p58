@@ -1,0 +1,16 @@
+# Solver floor of the exact solver for different c_alpha and K, game family F1
+name: c_alpha_floor
+family: F1
+n: [3]
+A: 2
+S: 3
+H: 3
+beta: 1.0      # Dirichlet concentration of the transitions
+w: 0.5         # weight of the state term g(s) in the reward
+sigma: 0.3
+epsilon: 0.1   # only for the summary (share of instances with gap <= epsilon)
+
+n_instances: 10
+
+c_alpha: [0.5, 1, 4, 24]   # the paper needs c_alpha >= 24, the sweeps use 1
+K: [250, 1000, 4000]
