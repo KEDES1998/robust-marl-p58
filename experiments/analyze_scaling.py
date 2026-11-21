@@ -16,7 +16,7 @@ recomputed (``--boot`` resamples, fixed seed). An upper end of ``inf`` means tha
 
 The plot (``--plot``) shows the mean of N_all over the games per n with a 95 % bootstrap
 interval (games resampled), a semi-log fit on the informative n (dashed) and the region where
-F1 is nearly trivial (shaded; see ``plot``). Log scale on the y axis only.
+F1 is (partly) trivial (shaded; see ``plot``). Log scale on the y axis only.
 
 Fits, on the geometric mean over instances:
 
@@ -167,15 +167,16 @@ def mean_ci(values: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[
 
 
 def trivial_start(summary: pd.DataFrame) -> float | None:
-    """First n at which most instances are solved by Robust-Q-FTRL with K = 1 (uniform policy).
+    """First n at which any instance is solved by Robust-Q-FTRL with K = 1 (uniform policy).
+
+    Below it is the informative range used in the docs; from it on N_all partly measures the game, not learning.
 
     Needs Robust-Q-FTRL runs with K = 1; returns None otherwise.
     """
     s = summary[summary["method"] == "robust_q_ftrl"]
     if s.empty or (s["solved_by_K1"] == 0).all():
         return None
-    total = s["solved"].str.split("/").str[1].astype(int)
-    trivial = s.loc[s["solved_by_K1"].astype(int) > total / 2, "n"]
+    trivial = s.loc[s["solved_by_K1"].astype(int) > 0, "n"]
     return float(trivial.min()) if len(trivial) else None
 
 
@@ -188,7 +189,7 @@ def plot(
     - The fit (dashed) is ``log N_all = a + b n`` on the n in ``fit_n``; by default all n below
       the trivial region. It is drawn over the whole range of n.
     - The trivial region (shaded) starts at ``trivial_from``; by default at the first n where
-      most instances are solved with K = 1 (see ``trivial_start``), none if that is unknown.
+      any instance is solved with K = 1 (see ``trivial_start``), none if that is unknown.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -210,7 +211,7 @@ def plot(
         ax.axvspan(start - 0.5, ns[-1] + 0.4, color=SHADE, zorder=0, lw=0)
         narrow = ns[-1] + 0.4 - (start - 0.5) < 2.5         # too narrow for the label: put it above the axes
         ax.text((start - 0.5 + ns[-1] + 0.4) / 2, 1.01 if narrow else 0.06 if single else 0.94,
-                "F1 nearly trivial" if narrow else "F1 nearly trivial here", transform=ax.get_xaxis_transform(),
+                "F1 (partly) trivial" if narrow else "F1 (partly) trivial here", transform=ax.get_xaxis_transform(),
                 ha="center", va="bottom" if narrow or single else "top", color=SHADE_TEXT,
                 fontsize=12 if narrow else 15, zorder=1)
 
@@ -280,7 +281,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--methods", nargs="+", choices=list(BUDGET), help="methods to plot (default: all in the CSVs)")
     ap.add_argument("--fit-n", nargs="+", type=int, help="n used for the dashed fit (default: all n below the trivial region)")
     ap.add_argument("--trivial-from", type=float,
-                    help="first n of the shaded trivial region (default: first n where most instances are solved with K = 1)")
+                    help="first n of the shaded trivial region (default: first n where any instance is solved with K = 1)")
     ap.add_argument("--boot", type=int, default=2000, help="bootstrap resamples for the CI of N_lowest")
     args = ap.parse_args(argv)
 

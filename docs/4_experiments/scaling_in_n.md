@@ -133,6 +133,23 @@ All Robust-Q-FTRL budgets at the median have N = 1 except n = 2, ε = 0.05.
 
 For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
 
+### Plots
+
+N_all(ε) against n on a log scale. Points are the arithmetic mean over the 10 instances, with
+a 95 % bootstrap interval (instances resampled). They are somewhat higher than the geometric
+means in the tables, most visibly where a few instances need a much larger budget. The dashed
+lines are semi-log fits on the informative range. The shaded region starts at the first n where
+any instance is already solved at K = 1, the rows in *italics* in the tables.
+
+| | ε = 0.1 | ε = 0.05 |
+|---|---|---|
+| **Setting A** (β = 1, w = 0.5) | ![N_all, setting A, ε = 0.1](../../results/scaling_n/20261119-202618/n_all_f1_eps0.1.png) | ![N_all, setting A, ε = 0.05](../../results/scaling_n/20261119-202618/n_all_f1_eps0.05.png) |
+| **Setting B** (β = 0.1, w = 0) | ![N_all, setting B, ε = 0.1](../../results/scaling_n/20261119-213140/n_all_f1_eps0.1.png) | ![N_all, setting B, ε = 0.05](../../results/scaling_n/20261119-213140/n_all_f1_eps0.05.png) |
+
+In every panel plug-in (dark) rises as a straight line on the log scale, while Robust-Q-FTRL
+(blue) rises more slowly and stays above it in the informative range. In the shaded region
+Robust-Q-FTRL drops to the cost of the uniform policy, which is not learning.
+
 ### Growth rates
 
 The cost of each method splits into a fixed structural part and a per-agent budget:

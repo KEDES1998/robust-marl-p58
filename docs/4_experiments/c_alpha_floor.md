@@ -40,6 +40,12 @@ Wall time 1.5 min with 8 processes (12 min compute; about 9.5 s per run at K = 3
 Share of instances with floor ≤ 0.05: c_α = 0.5 and 1 at every K; c_α = 4 from K = 4000;
 c_α = 24 only from K = 16000.
 
+![Solver floor versus K for each c_α](../../results/c_alpha_floor/20261120-082743/floor.png)
+
+Mean floor over the 10 instances (the values in the table) with a 95 % bootstrap interval,
+both axes logarithmic. Every c_α falls at about the same rate in K; c_α = 24 is shifted up by
+a factor 4–10 and crosses ε = 0.05 only between K = 8000 and 16000.
+
 ### Output weights α^K_k (no game needed)
 
 | c_α | K | effective number of plans (1 / Σ w²) | weight on k ≤ K/2 | η_K |
