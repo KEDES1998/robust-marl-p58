@@ -1,0 +1,13 @@
+config: experiments/configs/c_alpha_floor.yaml
+overrides:
+  n: null
+  instances: null
+  c_alpha: null
+  K: null
+  epsilon: null
+  workers: 8
+started: '2026-11-20T08:27:43'
+finished: '2026-11-20T08:29:14'
+n_runs: 200
+python: 3.14.7
+numpy: 2.5.5

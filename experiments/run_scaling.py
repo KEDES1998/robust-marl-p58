@@ -75,13 +75,17 @@ from rmg.simulator import GenerativeModel  # noqa: E402
 METHODS = ("exact", "plugin", "robust_q_ftrl")
 
 FIELDS = [
-    "family", "n", "S", "H", "A", "sigma",
+    "family", "n", "S", "H", "A", "beta", "w", "sigma",
     "instance_seed", "sampling_seed",
     "method", "m", "N", "K", "c_alpha",
     "n_samples", "gap_out", "gap_in", "runtime_s",
 ]
 """One row per run. Columns that do not apply to a method stay empty
-(``m`` only for plugin, ``N`` only for robust_q_ftrl, ``sampling_seed`` not for exact)."""
+(``m`` only for plugin, ``N`` only for robust_q_ftrl, ``sampling_seed`` not for exact).
+``beta`` and ``w`` are the F1 parameters of ``random_game``."""
+
+GAME_DEFAULTS = {"beta": 1.0, "w": 0.5}
+"""Defaults of ``random_game``, used when the config does not set ``beta`` or ``w``."""
 
 
 # ---------------------------------------------------------------------------
@@ -90,9 +94,14 @@ FIELDS = [
 
 
 def make_game(cfg: dict, n: int, instance_seed: int) -> MarkovGame:
-    """The game of the configured family for n agents; ``instance_seed`` alone fixes the instance."""
+    """The game of the configured family for n agents; ``instance_seed`` alone fixes the instance.
+
+    F1 also needs ``beta`` (Dirichlet concentration) and ``w`` (state weight in the reward);
+    ``main`` and ``build_jobs`` fill in ``GAME_DEFAULTS`` if the config does not set them.
+    """
     if cfg["family"] == "F1":
-        return random_game(n=n, S=cfg["S"], H=cfg["H"], A=cfg["A"], seed=instance_seed)
+        return random_game(n=n, S=cfg["S"], H=cfg["H"], A=cfg["A"], seed=instance_seed,
+                           beta=cfg["beta"], w=cfg["w"])
     if cfg["family"] == "F2":
         raise NotImplementedError("game family F2 (aggregative_game) is not implemented yet")
     raise ValueError(f"unknown family {cfg['family']!r}, expected F1 or F2")
@@ -102,6 +111,7 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
     """All runs as small dicts, most expensive first (large n), for an even load across workers."""
     jobs = []
     base = {key: cfg[key] for key in ("family", "S", "H", "A", "sigma", "c_alpha")}
+    base.update({key: cfg.get(key, default) for key, default in GAME_DEFAULTS.items()})
     for n in cfg["n"]:
         for inst in range(cfg["n_instances"]):
             common = dict(base, n=n, instance_seed=inst)
@@ -116,7 +126,8 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
                     rq = cfg["methods"]["robust_q_ftrl"]
                     for N in rq["N"]:
                         for K in rq["K"]:
-                            jobs.append(dict(common, method="robust_q_ftrl", sampling_seed=seed, N=N, K=K))
+                            jobs.append(dict(common, method="robust_q_ftrl", sampling_seed=seed, N=N, K=K,
+                                             c_b=rq.get("c_b", 1.0)))
     jobs.sort(key=lambda job: -job["n"])
     return jobs
 
@@ -124,7 +135,7 @@ def build_jobs(cfg: dict, methods: list[str]) -> list[dict]:
 def run_job(job: dict) -> dict:
     """Runs one job and returns its CSV row. Only the evaluation reads the true model."""
     start = time.perf_counter()
-    cfg = {"family": job["family"], "S": job["S"], "H": job["H"], "A": job["A"]}
+    cfg = {key: job[key] for key in ("family", "S", "H", "A", *GAME_DEFAULTS)}
     game = make_game(cfg, job["n"], job["instance_seed"])
     sigma, c_alpha = job["sigma"], job["c_alpha"]
 
@@ -137,7 +148,9 @@ def run_job(job: dict) -> dict:
         n_samples = sim.n_samples
     elif job["method"] == "robust_q_ftrl":
         sim = GenerativeModel(game, seed=job["sampling_seed"])
-        mixture = robust_q_ftrl.run(sim, sigma, job["K"], job["N"], c_alpha=c_alpha, seed=job["sampling_seed"])
+        mixture = robust_q_ftrl.run(
+            sim, sigma, job["K"], job["N"], c_alpha=c_alpha, c_b=job.get("c_b", 1.0), seed=job["sampling_seed"]
+        )
         n_samples = sim.n_samples
     else:
         raise ValueError(f"unknown method {job['method']!r}")
@@ -151,16 +164,6 @@ def run_job(job: dict) -> dict:
         runtime_s=round(time.perf_counter() - start, 3),
     )
     return row
-
-
-def check_robust_q_ftrl_ready() -> None:
-    """Fails fast, before the sweep starts, if ``robust_q_ftrl.run`` is still a stub."""
-    from rmg.games import toy_public_goods_game
-
-    try:
-        robust_q_ftrl.run(GenerativeModel(toy_public_goods_game(), seed=0), 0.2, K=1, N=1, seed=0)
-    except NotImplementedError as exc:
-        sys.exit(f"Method robust_q_ftrl cannot run yet: {exc}. Leave it out of --methods.")
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +218,8 @@ def print_summary(rows: list[dict], epsilon: float) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("config", help="path to the YAML config")
-    parser.add_argument("--methods", nargs="+", choices=METHODS, default=["exact", "plugin"],
-                        help="methods to run (default: exact plugin)")
+    parser.add_argument("--methods", nargs="+", choices=METHODS, default=["exact", "plugin", "robust_q_ftrl"],
+                        help="methods to run (default: exact plugin robust_q_ftrl)")
     parser.add_argument("--n", nargs="+", type=int, help="override the values of n")
     parser.add_argument("--instances", type=int, help="override n_instances")
     parser.add_argument("--seeds", type=int, help="override n_sampling_seeds")
@@ -232,9 +235,9 @@ def main(argv: list[str] | None = None) -> None:
         cfg["n_instances"] = args.instances
     if args.seeds is not None:
         cfg["n_sampling_seeds"] = args.seeds
+    for key, default in GAME_DEFAULTS.items():
+        cfg.setdefault(key, default)
 
-    if "robust_q_ftrl" in args.methods:
-        check_robust_q_ftrl_ready()
     make_game(cfg, cfg["n"][0], 0)  # fails here, not in a worker, if the family is not available
 
     started = datetime.now()

@@ -1,0 +1,28 @@
+# Robust-Q-FTRL on game family F1
+name: scaling_n
+family: F1
+n: [2, 3, 4, 5, 6, 7, 8, 9]
+A: 2
+S: 3
+H: 3
+beta: 0.1      # Dirichlet concentration of the transitions
+w: 0         # weight of the state term g(s) in the reward
+sigma: 0.3
+epsilon: 0.05
+
+n_instances: 10
+n_sampling_seeds: 10
+success_rate: 0.9
+
+c_alpha: 1.0
+
+methods:
+  exact:
+    K: 2000
+  plugin:
+    m: [1, 2, 4, 8, 16, 32, 64, 128]
+    K_solver: 2000
+  robust_q_ftrl:
+    N: [1, 4]
+    K: [1, 32, 64, 128, 256, 512, 1024, 2048]
+    c_b: 0.0

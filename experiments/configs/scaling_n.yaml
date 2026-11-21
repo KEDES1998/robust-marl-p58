@@ -1,30 +1,28 @@
-# Experiment C1: how does N_all(eps) scale with the number of agents n?
-# Draft; values still to be agreed on in the group.
-
+# Robust-Q-FTRL on game family F1
 name: scaling_n
-family: F1            # F1 = random_game, F2 = aggregative_game
-n: [2, 3, 4, 5, 6, 7, 8]
-A: 2                  # actions per agent
+family: F1
+n: [2, 3, 4, 5, 6, 7, 8, 9]
+A: 2
 S: 3
 H: 3
+beta: 0.1      # Dirichlet concentration of the transitions
+w: 0         # weight of the state term g(s) in the reward
 sigma: 0.3
-epsilon: 0.1
+epsilon: 0.05
 
-n_instances: 10       # random games per n (seeds 0..9)
-n_sampling_seeds: 10  # repetitions per game and budget
-success_rate: 0.9     # N_all(eps) = smallest budget with gap <= eps in >= 90 % of seeds
+n_instances: 10
+n_sampling_seeds: 10
+success_rate: 0.9
 
-# Learning-rate constant of Eq. (21), the same for both methods (proposal, to be agreed).
-# The paper's value 24 leaves a solver error of about 0.10-0.12 with K = 2000 on F1
-# (n = 2, 4), i.e. above epsilon; with 1 it is about 0.02-0.03 (see Protocol.md).
 c_alpha: 1.0
 
 methods:
-  exact:                               # solver on the true model: the floor no method can beat
+  exact:
     K: 2000
   plugin:
-    m: [1, 2, 4, 8, 16, 32, 64, 128]   # samples per (h, s, joint action), doubling
+    m: [1, 2, 4, 8, 16, 32, 64, 128]
     K_solver: 2000
   robust_q_ftrl:
-    N: [1, 2, 4, 8, 16, 32]
-    K: [64, 128, 256, 512, 1024, 2048]
+    N: [1, 4]
+    K: [1, 32, 64, 128, 256, 512, 1024, 2048]
+    c_b: 0.0

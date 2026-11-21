@@ -1,0 +1,15 @@
+config: experiments/configs/scaling_n.yaml
+overrides:
+  methods:
+  - exact
+  - plugin
+  - robust_q_ftrl
+  n: null
+  instances: null
+  seeds: null
+  workers: 8
+started: '2026-11-19T21:31:40'
+finished: '2026-11-19T22:02:23'
+n_runs: 19280
+python: 3.14.7
+numpy: 2.5.5

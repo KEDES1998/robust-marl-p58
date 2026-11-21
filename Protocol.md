@@ -5,7 +5,14 @@ member's part does, why it matters, its current status and the open points. Sect
 gives an overview of the whole project, written so that anyone can follow it without
 having read the paper in detail.
 
-Last updated: 8 Nov 2026 (state of commit `5119c72` and the first plug-in sweep).
+Last updated: 20 Nov 2026 (Section 3.9: second F1 setting β = 0.1, w = 0, sweeps extended to
+n = 9; Section 3.10: solver floor versus c_α). Section 1 reflects the state of commit `5119c72` (8 Nov 2026).
+
+**Note on result paths.** The folders `results/scaling_n_f1_rq/…` and
+`results/scaling_n/20261108-…`, `20261119-102118` named in Sections 1 and 3.1–3.8 were
+replaced by `results/scaling_n/20261119-202618` (setting A, n = 2–9), which reproduces their
+N_all tables and mean gaps for n = 2–8 exactly. The config `scaling_n_f1_rq.yaml` is now
+`scaling_n.yaml`. Current results are documented in [docs/](docs/README.md).
 
 ---
 
@@ -126,7 +133,8 @@ game (true P, R)
 Game family F1 (`random_game`) uses the same recipe for every $n$:
 
 - every state gets a quality $g(s)$ spread evenly over $[0, 1]$ (for $S = 3$: $0, 0.5, 1$),
-- $R_i(h, s, a) = 0.5\, g(s) + 0.5\, u$ with $u \sim \text{Unif}[0, 1]$,
+- $R_i(h, s, a) = w\, g(s) + (1 - w)\, u$ with $u \sim \text{Unif}[0, 1]$ and weight
+  $w \in [0, 1]$ (default $0.5$),
 - $P(\cdot \mid h, s, a) \sim \text{Dirichlet}(\beta \mathbf{1})$; small $\beta$ gives peaked
   distributions, large $\beta$ flat ones.
 
@@ -277,7 +285,7 @@ python experiments/run_scaling.py experiments/configs/scaling_n.yaml --n 2 3 --i
 - `A` may be one number (same for every agent) or a tuple $(A_1, \dots, A_n)$.
 - One random generator per `seed`: first one Dirichlet draw per $(h, s, \text{joint action})$
   for $P$, then the uniform noise for $R$. The quality is $g = (0, \tfrac{1}{S-1}, \dots, 1)$.
-- `meta` stores all parameters (family, $n$, $S$, $H$, $A$, seed, $\beta$); the name reads
+- `meta` stores all parameters (family, $n$, $S$, $H$, $A$, seed, $\beta$, $w$); the name reads
   e.g. `F1 n=3 seed=0`.
 
 Checks:
@@ -620,7 +628,361 @@ _To be filled in by Tiago._
 Responsibilities (from the README): Robust-Q-FTRL (`run`), TV worst case in dual form (Eq. 19),
 Robust-Q-FTRL runs; Overleaf: method section on the algorithm.
 
-_To be filled in by Timon._
+### 3.1 Current status (19 Nov 2026)
+
+- `robust.py`: `tv_worst_case_dual` (Eq. 19) implemented; `test_greedy_equals_dual` passes on
+  1000 random vectors.
+- `robust_q_ftrl.py`: `run` (Algorithm 2 with Algorithm 1, learning rates Eqs. 21–22, bonus
+  Eq. 23, value update Eq. 25) implemented, plus the internal helpers `_run` (also returns
+  $V$), `_query_plan` and `_n_sample_estimation`.
+- `run_scaling.py`: passes the bonus constant `c_b` from the config to `run` (default 1.0 if the
+  config does not set it).
+- New: config `experiments/configs/scaling_n_f1_rq.yaml`, analysis script
+  `experiments/analyze_scaling.py`, 6 new tests in `tests/test_robust_q_ftrl.py`.
+- First Robust-Q-FTRL sweep on F1 done (Section 3.5) and compared with Kevin's plug-in sweep.
+- $K = 1$ added to the grid as a triviality marker (Section 3.6): config
+  `scaling_n_f1_rq.yaml` now has $K \in \lbrace 1, 32, \dots, 2048 \rbrace$; `run_scaling.py`
+  got the override `--K`; `analyze_scaling.py` reports per $n$ how many instances are already
+  solved at $K = 1$ (column `solved_by_K1`).
+- Complete rerun of the F1 experiment (exact, plug-in, Robust-Q-FTRL with the full $K$ grid) in
+  one folder, `results/scaling_n_f1_rq/20261119-102118`; it reproduces the earlier three runs row by row (all
+  tables in Sections 3.5–3.6 come from it).
+
+- 19–20 Nov: F1 parameters β and w configurable (`run_scaling.py`, `f1_triviality.py`); both
+  sweeps rerun for n = 2–9 in two settings (Section 3.9); new experiment
+  `experiments/c_alpha_solver_floor.py` with config `c_alpha_floor.yaml` (Section 3.10).
+
+Game family F2 was **not** implemented (decision: stay with F1 for now).
+
+`pytest` (20 Nov): 67 tests, 66 passed, 1 skipped (F2), 0 failed.
+
+### 3.2 Log
+
+| Date | What happened | `pytest` |
+|---|---|---|
+| 14 Nov | `tv_worst_case_dual`, `robust_q_ftrl.run`, 6 new tests, `c_b` in `run_scaling.py` | 62 passed, 1 skipped |
+| 14 Nov | Robust-Q-FTRL sweep on F1 (`results/scaling_n_f1_rq/20261114-114125`), 9800 runs, 1 h 32 min with 8 processes | – |
+| 19 Nov | $K = 1$ in the grid, `--K` override, `test_K1_returns_the_uniform_policy`; $K = 1$ sweep on F1 (`results/scaling_n_f1_rq/20261119-101535`), 1400 runs, 6 s | 63 passed, 1 skipped |
+| 19 Nov | Complete rerun, all three methods, full grid (`results/scaling_n_f1_rq/20261119-102118`), 16,870 runs, 5 h 12 min with 8 processes; identical to the earlier runs (max. difference in `gap_out` $10^{-13}$ for exact and plug-in, 0 for Robust-Q-FTRL) | – |
+| 19 Nov | `beta` and `w` in the config; setting A ($\beta = 1$, $w = 0.5$), $n = 2, \dots, 9$ (`results/scaling_n/20261119-202618`), 19,280 runs, 32 min with 8 processes | – |
+| 19 Nov | setting B ($\beta = 0.1$, $w = 0$), $n = 2, \dots, 9$ (`results/scaling_n/20261119-213140`), 19,280 runs, 31 min; now the default in `scaling_n.yaml` | – |
+| 20 Nov | `c_alpha_solver_floor.py`, 3 new tests; floor for $c_\alpha \in \lbrace 0.5, 1, 4, 24 \rbrace$, $K$ up to 32,000 (`results/c_alpha_floor/20261120-082743`), 200 runs, 1.5 min | 66 passed, 1 skipped |
+
+### 3.3 Implementation
+
+#### Dual form of the TV worst case: `tv_worst_case_dual`
+
+$$\max_{\alpha \in [\min V, \max V]} \Big\lbrace p \cdot [V]_\alpha - \sigma \big(\alpha - \min_s [V]_\alpha(s)\big) \Big\rbrace, \qquad [V]_\alpha = \min(V, \alpha).$$
+
+For $\alpha \ge \min V$ the term $\min_s [V]_\alpha(s)$ is just $\min V$. The objective is
+concave and piecewise linear in $\alpha$ ($p \cdot \min(V, \alpha)$ is concave, the penalty is
+linear) and has kinks only at the values $V(s)$. The maximum is therefore attained at one of
+the $V(s)$, and trying all $S$ candidates is exact, with no numerical search. Cost
+$O(S^2)$ per row; vectorised over leading axes like the greedy version.
+
+Check with the worked example: $V = (0, 5, 10)$, $p = (0.2, 0.3, 0.5)$, $\sigma = 0.3$.
+Candidates: $\alpha = 0$: $0$; $\alpha = 5$: $0.3 \cdot 5 + 0.5 \cdot 5 - 0.3 \cdot 5 = 2.5$;
+$\alpha = 10$: $6.5 - 3 = 3.5$. Maximum $3.5$, the same as the greedy solution.
+
+Inside `run` the greedy version is used (both are equal; the greedy one is faster).
+
+#### Algorithm 1 (N-sample estimation): `_n_sample_estimation`
+
+For agent $i$ and every pair $(s, a_i)$: $N$ queries in which agent $i$ plays $a_i$ and every
+other agent $j$ draws $a_j \sim \pi^k_{j,h}(\cdot \mid s)$ independently (Eq. 16). Then
+
+$$\hat r^k_{i,h}(s, a_i) = \frac1N \sum_t r_{i,h}(s, a^t), \qquad
+\hat P^k_{i,h}(s' \mid s, a_i) = \frac1N \sum_t \mathbb 1\lbrace s^t = s' \rbrace .$$
+
+Unlike the plug-in method, the reward estimate is noisy: it averages over the sampled actions
+of the others. Its expectation is exactly the mixed kernel of Eq. (35) (`mixed_kernel`), which
+the test `test_n_sample_estimation_matches_mixed_kernel` checks with $N = 20000$.
+
+Design decisions:
+
+- **One simulator batch per $(h, k)$ for all agents.** Line 5 of Algorithm 2 loops over $i$, but
+  every agent samples under the same $\pi^k_h$ (the update produces $\pi^{k+1}$ and does not
+  change $\pi^k$). All $S \cdot N \cdot \sum_i A_i$ queries therefore go into one
+  `sample_batch` call. The query layout (agent block, then $(s, a_i, t)$) is fixed once per run
+  (`_query_plan`).
+- **Two random streams:** the actions of the other agents are drawn with the `seed` argument of
+  `run`; the next states come from the simulator's own stream. `run_scaling.py` passes the
+  sampling seed for both, so a run is reproducible (`test_run_is_reproducible`).
+- **Sample cost** exactly $H \cdot K \cdot N \cdot S \cdot \sum_i A_i$
+  (`test_run_sample_count_is_sum_not_product`, with $A = (2, 3, 2)$: $\sum = 7$, not $\prod = 12$).
+
+#### Algorithm 2: `run`
+
+Same loop as Ali's `solve_exact` (Section 4), so the two differ only in where $q$ comes from:
+
+```
+V[:, H] = 0
+for h = H-1, ..., 0:
+    pi^1 = uniform, Q^0 = 0
+    for k = 1, ..., K:
+        r_hat, P_hat = Algorithm 1 under pi^k             (one batch, all agents)
+        q_i = r_hat_i + worst case of P_hat_i . V_i[h+1]  (Eqs. 18/19)
+        Q_i = (1 - alpha_k) Q_i + alpha_k q_i             (line 8)
+        pi_i^{k+1} = softmax(eta_{k+1} Q_i)               (Eq. 22)
+    V_i[h] = min( sum_k alpha^K_k <pi_i^k, q_i^k> + beta_i, H - h )   (Eq. 25, 0-based h)
+output: mixture of the K plans with weights alpha^K_k (Eq. 24)
+```
+
+Bonus (Eq. 23), with the weighted variance accumulated during the $K$ iterations:
+
+$$\beta_{i,h}(s) = c_b \sqrt{\frac{\log^3\big(K S \sum_i A_i / \delta\big)}{K H}
+\sum_{k=1}^K \alpha^K_k \Big(\text{Var}_{\pi^k_{i,h}(\cdot \mid s)}\big(q^k_{i,h}(s, \cdot)\big) + H\Big)} .$$
+
+The weights $\alpha^K_k$ sum to 1, so the sum equals the weighted variance plus $H$.
+
+Checks (`tests/test_robust_q_ftrl.py`): with $N = 5000$ and $c_b = 0$ the values $V$ of `run`
+agree with those of `solve_exact` to within 0.03 on the toy game; with $c_b = 0$, $V \le H - h$;
+with a huge $c_b$, $V = H - h$ everywhere. On F1 ($n = 3$, $K = 256$), the gap of `run` approaches
+the gap of `solve_exact` as $N$ grows (0.095 at $N = 64$ versus 0.096 for the exact solver).
+
+Runtime: a run with $n = 8$, $K = 512$, $N = 1$ takes about 1.5 s (plus about 0.3 s for
+`gap_out`), much less than one plug-in run at $n = 8$ (about 16 s, dominated by the solver on
+$2^8$ joint actions).
+
+### 3.4 Bonus constant $c_b$: switched off in the experiments
+
+The paper leaves $c_b$ as "some absolute constant". With $c_b = 1$ the bonus is larger than the
+value range: for $K = 256$, $S = 3$, $\sum_i A_i = 4$, $\delta = 0.1$:
+$\log(256 \cdot 3 \cdot 4 / 0.1) \approx 10.4$, cubed about 1130, divided by $KH = 768$ about 1.5,
+times (variance $+ H \approx 3$) gives $\beta \approx 2.1$. Every $V_{i,h}$ is then capped at
+$H - h$, $V_{h+1}$ is constant over the states, the worst case has nothing left to exploit and
+the earlier time steps learn only the immediate reward. Measured on F1 ($K = 256$, $N = 1$,
+5 instances, $\sigma = 0.3$):
+
+| | $c_b = 0$ | $c_b = 0.1$ | $c_b = 1$ |
+|---|---|---|---|
+| $n = 2$: mean `gap_out` | 0.094 | 0.094 | 0.126 |
+| $n = 2$: share of $V_{h=1,2}$ at the cap | 0 | 0.13 | 1 |
+| $n = 4$: mean `gap_out` | 0.095 | 0.096 | 0.106 |
+| $n = 4$: share of $V_{h=1,2}$ at the cap | 0 | 0.07 | 1 |
+
+The bonus is a proof device (optimism for the high-probability bound); in the experiments it only
+hurts. The config therefore sets `c_b: 0.0`; the function default stays 1.0, analogous to
+$c_\alpha$ (Section 1.8). To be mentioned in the method section of the report.
+
+### 3.5 Robust-Q-FTRL on F1 versus the plug-in baseline
+
+**Settings.** Identical to Kevin's plug-in sweep (Section 1.9): F1, $n = 2, \dots, 8$, $A = 2$,
+$S = 3$, $H = 3$, $\sigma = 0.3$, $c_\alpha = 1$, instance seeds 0–9, sampling seeds 0–9,
+success rate 90 %. Robust-Q-FTRL grid: $N \in \lbrace 1, 4 \rbrace$,
+$K \in \lbrace 1, 32, 64, \dots, 2048 \rbrace$ ($K = 1$: Section 3.6), $c_b = 0$. Raw data
+for all three methods (70 exact, 5600 plug-in, 11,200 Robust-Q-FTRL runs) in one file:
+`results/scaling_n_f1_rq/20261119-102118/runs.csv`. It reproduces Kevin's plug-in sweep
+(`results/scaling_n/20261108-133521`) and the earlier Robust-Q-FTRL runs of 14 Nov and 19 Nov
+(`20261114-114125`, `20261119-101535`) row by row. Reproduce the tables and the plots with
+
+```
+python experiments/run_scaling.py experiments/configs/scaling_n_f1_rq.yaml --methods exact plugin robust_q_ftrl --workers 8
+python experiments/analyze_scaling.py results/scaling_n_f1_rq/20261119-102118/runs.csv --eps 0.1 --plot n_all_f1_eps0.1.png
+python experiments/analyze_scaling.py results/scaling_n_f1_rq/20261119-102118/runs.csv --eps 0.05 --plot n_all_f1_eps0.05.png
+```
+
+Cost formulas with these settings: plug-in $N_{\text{all}} = 9 \cdot 2^n \cdot m$;
+Robust-Q-FTRL $N_{\text{all}} = HKNS \sum_i A_i = 18 \cdot K N \cdot n$.
+
+**Mean `gap_out` of Robust-Q-FTRL** (10 instances × 10 seeds; $K = 1$ in Section 3.6):
+
+| $N$, $K$ \ $n$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| 1, 32 | 0.182 | 0.164 | 0.137 | 0.099 | 0.076 | 0.059 | 0.041 |
+| 1, 128 | 0.121 | 0.123 | 0.114 | 0.086 | 0.070 | 0.056 | 0.040 |
+| 1, 256 | 0.091 | 0.095 | 0.096 | 0.078 | 0.067 | 0.054 | 0.039 |
+| 1, 512 | 0.070 | 0.065 | 0.070 | 0.067 | 0.059 | 0.051 | 0.037 |
+| 1, 1024 | 0.049 | 0.043 | 0.047 | 0.051 | 0.050 | 0.046 | 0.035 |
+| 1, 2048 | 0.032 | 0.029 | 0.033 | 0.035 | 0.038 | 0.040 | 0.032 |
+| 4, 256 | 0.086 | 0.091 | 0.091 | 0.075 | 0.064 | 0.052 | 0.037 |
+| 4, 2048 | 0.023 | 0.026 | 0.027 | 0.033 | 0.034 | 0.036 | 0.030 |
+
+Two observations:
+
+1. **$N = 1$ suffices.** Going from $N = 1$ to $N = 4$ lowers the gap by at most 0.01 and costs
+   4 times as many samples. In every $N_{\text{all}}$ below, the cheapest successful budget has
+   $N = 1$. This answers the README sub-question: in practice the gap is limited by the number of
+   FTRL iterations $K$ (optimisation), not by the samples per iteration.
+2. **The $K$ needed for a given gap does not grow with $n$.** Along each row the gap stays flat or
+   falls. The only increase is at $K = 2048$ (0.032 to 0.040 from $n = 2$ to $n = 7$); the exact
+   solver on the true model shows the same drift (floor 0.022 to 0.031, Section 1.9), so it comes
+   from the FTRL optimisation, not from sampling.
+
+**$N_{\text{all}}(\varepsilon)$ without $K = 1$** (grid $K \ge 32$), geometric mean over the 10 instances (per instance: cheapest
+budget at which at least 9 of 10 seeds reach $\text{gap} \le \varepsilon$; all 70 instances are
+solved for both methods and both $\varepsilon$). In brackets the typical budget.
+
+| $n$ | plug-in, $\varepsilon = 0.1$ | Robust-Q-FTRL, $\varepsilon = 0.1$ | plug-in, $\varepsilon = 0.05$ | Robust-Q-FTRL, $\varepsilon = 0.05$ |
+|---|---|---|---|---|
+| 2 | 177 ($m = 8$) | 12,161 ($K = 256$) | 709 ($m = 32$) | 59,886 ($K = 1024$) |
+| 3 | 501 ($m = 8$) | 18,241 ($K = 256$) | 1,871 ($m = 32$) | 63,518 ($K = 1024$) |
+| 4 | 1,003 ($m = 8$) | 26,067 ($K = 256$) | 2,469 ($m = 16$) | 104,267 ($K = 1024$) |
+| 5 | 1,746 ($m = 8$) | 5,760 ($K = 32$) | 6,984 ($m = 32$) | 211,728 ($K = 2048$) |
+| 6 | 3,743 ($m = 8$) | 3,456 ($K = 32$) | 10,586 ($m = 16$) | 179,657 ($K = 2048$) |
+| 7 | 7,486 ($m = 8$) | 4,032 ($K = 32$) | 22,692 ($m = 16$) | 120,384 ($K = 2048$) |
+| 8 | 9,216 ($m = 4$) | 4,608 ($K = 32$) | 17,198 ($m = 8$) | 6,080 ($K = 32$) |
+
+All Robust-Q-FTRL budgets have $N = 1$. The plots in the results folder include $K = 1$
+(Section 3.6).
+
+Slope fits over all $n$ ($\varepsilon = 0.1$): plug-in $\log_2 N_{\text{all}}$ against $n$ has
+slope 0.96, a factor 1.94 per extra agent (exponential, as in Section 1.9). Robust-Q-FTRL has
+slope $-0.41$ without $K = 1$ and $-1.46$ with it; both fits are meaningless because of the F1
+effect described next.
+
+### 3.6 $K = 1$: showing where F1 is trivial
+
+**What $K = 1$ does.** With $K = 1$, $\log K = 0$, so the FTRL rate is
+$\eta = \sqrt{\log K / (\alpha_1 H)} = 0$ and the output mixture is the single plan $\pi^1$, the
+uniform policy, with weight 1. The $N$ samples per $(s, a_i)$ are drawn and counted
+($18 \cdot N \cdot n$ samples) but only reach the value estimates $V$, which the output never
+uses. A $K = 1$ run therefore **learns nothing**: its gap is the gap of the uniform policy
+(`test_K1_returns_the_uniform_policy`). It is in the grid only to make visible for which $n$ F1
+needs no learning.
+
+First run separately (1400 runs, 6 s, `results/scaling_n_f1_rq/20261119-101535`), now part of
+the complete rerun (Section 3.5). Only $K = 1$:
+
+```
+python experiments/run_scaling.py experiments/configs/scaling_n_f1_rq.yaml --methods robust_q_ftrl --K 1 --workers 8
+```
+
+**Mean `gap_out` at $K = 1$** (identical for $N = 1$ and $N = 4$, and identical to the
+uniform-policy gaps of Section 1.9, an independent check):
+
+| $n$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| mean `gap_out` | 0.269 | 0.207 | 0.163 | 0.110 | 0.081 | 0.060 | 0.042 |
+| instances solved at $K = 1$, $\varepsilon = 0.1$ | 0/10 | 0/10 | 0/10 | 3/10 | 9/10 | 10/10 | 10/10 |
+| instances solved at $K = 1$, $\varepsilon = 0.05$ | 0/10 | 0/10 | 0/10 | 0/10 | 0/10 | 1/10 | 9/10 |
+
+**$N_{\text{all}}$ of Robust-Q-FTRL with $K = 1$ in the grid** (geometric mean over instances;
+plug-in unchanged, see Section 3.5):
+
+| $n$ | $\varepsilon = 0.1$ | $\varepsilon = 0.05$ |
+|---|---|---|
+| 2 | 12,161 ($K = 256$) | 59,886 ($K = 1024$) |
+| 3 | 18,241 ($K = 256$) | 63,518 ($K = 1024$) |
+| 4 | 26,067 ($K = 256$) | 104,267 ($K = 1024$) |
+| 5 | 2,036 (3 of 10 at $K = 1$) | 211,728 ($K = 2048$) |
+| 6 | 153 (9 of 10 at $K = 1$) | 179,657 ($K = 2048$) |
+| 7 | 126 (all at $K = 1$) | 74,105 (1 of 10 at $K = 1$) |
+| 8 | 144 (all at $K = 1$) | 269 (9 of 10 at $K = 1$) |
+
+Plots: `results/scaling_n_f1_rq/20261119-102118/n_all_f1_eps0.1.png` and `n_all_f1_eps0.05.png` in the
+same folder (commands in Section 3.5).
+
+Reading: at $\varepsilon = 0.1$ the Robust-Q-FTRL curve drops by two orders of magnitude between
+$n = 4$ and $n = 6$, down to $18 \cdot n$ samples, the cost of evaluating the uniform policy. This
+is the F1 triviality made visible, not learning: from $n = 6$ on, the uniform policy already is an
+$\varepsilon$-robust CCE. The plug-in method cannot take this shortcut (it always queries all
+$2^n$ joint actions and solves the estimated game), so its curve keeps doubling. For the report,
+points with `solved_by_K1` > 0 should be marked or left out of any slope fit; the informative
+range is $n \le 4$ at $\varepsilon = 0.1$ and $n \le 6$ at $\varepsilon = 0.05$.
+
+### 3.7 Interpretation: is the curse of multiagency broken?
+
+**Yes for the shape, with two caveats.**
+
+What the data show:
+
+- The per-agent budget Robust-Q-FTRL needs for a given $\varepsilon$ ($N = 1$ and a fixed $K$)
+  does not grow with $n$: for $\varepsilon = 0.1$ it is $K = 256$ at $n = 2, 3, 4$ and less
+  afterwards. Its cost is therefore $18 \cdot K \cdot n$, i.e. linear in $n$ (through
+  $\sum_i A_i = 2n$). From $n = 2$ to $n = 4$, $N_{\text{all}}$ grows by a factor 2.1 (the number of
+  agents doubles); the plug-in method needs a factor 5.7 over the same range and keeps doubling with
+  every agent.
+- Robust-Q-FTRL never queries a joint action deliberately; its sample counter contains no
+  $2^n$ term (`test_run_sample_count_is_sum_not_product`). The plug-in method cannot go below
+  $9 \cdot 2^n$ samples (one per joint action) even when the game is trivial.
+
+Caveat 1, **F1 becomes trivial for $n \ge 5$–6** (Section 1.9: the uniform policy already has
+gap $\le 0.1$ in 90–100 % of the instances). Robust-Q-FTRL exploits this: it starts from the
+uniform policy, and from $n = 5$ the smallest grid value $K = 32$ already succeeds, so
+$N_{\text{all}} = 576\,n$ there is the grid minimum, not a measured requirement. With $K = 1$ in
+the grid (Section 3.6) it drops further to $18\,n$, confirming that no learning is needed there. That Robust-Q-FTRL
+becomes cheaper than the plug-in method from $n = 6$ on (3,456 vs 3,743 at $n = 6$; 4,608 vs 9,216
+at $n = 8$) is therefore real but says little about learning. The informative range is
+$n = 2, \dots, 4$ (and up to 7 for $\varepsilon = 0.05$, where the triviality sets in later).
+
+Caveat 2, **constant factor.** For $n \le 4$ Robust-Q-FTRL needs 26–69 times more samples than
+the plug-in method at $\varepsilon = 0.1$ (34–84 times at $\varepsilon = 0.05$). The plug-in method gets its $K = 2000$ solver iterations for free (they run on
+the estimated model), while Robust-Q-FTRL pays $S \sum_i A_i N$ samples per iteration. Extrapolating
+the non-trivial regime (plug-in $\approx 9 \cdot 8 \cdot 2^n$, Robust-Q-FTRL
+$\approx 18 \cdot 256 \cdot n$ at $\varepsilon = 0.1$; $9 \cdot 24 \cdot 2^n$ versus
+$18 \cdot 1024 \cdot n$ at $\varepsilon = 0.05$), the curves would cross at about $n \approx 10$.
+This is an extrapolation; on F1 it cannot be measured, because F1 is trivial there.
+
+Summary for the report: the claim of Theorem 2 about the *shape* (sum instead of product) is
+consistent with the data: the per-agent budget $(K, N)$ is independent of $n$ while the plug-in
+cost doubles per agent. In absolute numbers and for $n \le 8$ on F1, the plug-in method is cheaper
+whenever the game is not trivial.
+
+### 3.8 Open points (Timon)
+
+Updated 20 Nov (after Sections 3.9 and 3.10).
+
+- Hand `results/scaling_n/20261119-213140/runs.csv` (setting B, main) and
+  `results/scaling_n/20261119-202618/runs.csv` (setting A) to Tiago (same CSV format as
+  Section 1.4, plus the columns `beta` and `w`); points with instances solved at $K = 1$ should
+  be marked in the plots.
+- Group decision: setting B gives five informative values of $n$ at $\varepsilon = 0.1$ (six at
+  $0.05$). Is that enough, or do we still need a game in which a single agent keeps mattering
+  for large $n$ (Section 1.9, options 1–3)? On F1 the predicted crossover ($n \approx 14$–16 in
+  setting B) cannot be shown.
+- Optional: run Robust-Q-FTRL with $c_\alpha = 24$ (faithful to Theorem 2); Section 3.10 shows it
+  needs $K \ge 16{,}000$ for $\varepsilon = 0.05$. And a sweep over $\sigma$ (README
+  sub-question "does a larger $\sigma$ need fewer samples?").
+- Overleaf: method section (Algorithms 1–2, dual form, why $N = 1$, $c_b = 0$ and $c_\alpha = 1$
+  in practice).
+
+### 3.9 Second F1 setting and $n = 9$ (19 Nov)
+
+Both sweeps now run $n = 2, \dots, 9$ with all three methods and the full grid (Section 3.5).
+F1 has two new config keys, `beta` (Dirichlet concentration) and `w` (weight of $g(s)$ in the
+reward):
+
+- **Setting A** ($\beta = 1$, $w = 0.5$, as before): `results/scaling_n/20261119-202618`.
+  For $n = 2, \dots, 8$ it reproduces the tables of Sections 3.5–3.6 exactly. At $n = 9$ all
+  instances are trivial at both $\varepsilon$.
+- **Setting B** ($\beta = 0.1$, $w = 0$, now the config default): `results/scaling_n/20261119-213140`.
+  Peaked transitions and pure-noise rewards make a single agent matter more (uniform-policy gap
+  about 1.65× larger), so F1 becomes trivial about 1.5 agents later: informative range
+  $n = 2, \dots, 6$ at $\varepsilon = 0.1$ and $n = 2, \dots, 7$ at $\varepsilon = 0.05$.
+
+Results in setting B (details in [docs/4_experiments/scaling_in_n.md](docs/4_experiments/scaling_in_n.md)):
+
+- Robust-Q-FTRL needs $K = 512$, $N = 1$ for every $n = 3, \dots, 6$ at $\varepsilon = 0.1$, and
+  $K = 2048$ for $n = 4, \dots, 7$ at $\varepsilon = 0.05$. Log-log exponent of $N_{\text{all}}$
+  on the informative range: 1.14 ($\varepsilon = 0.1$), 1.57 ($\varepsilon = 0.05$), i.e.
+  roughly linear in $n$.
+- The plug-in method gets away with $m = 1$ from $n \approx 6$ on (nearly deterministic
+  transitions), so its cost is the floor $9 \cdot 2^n$ of any joint-action method; factor 1.67
+  per agent on $n = 2, \dots, 6$, exactly 2 once $m = 1$.
+- The absolute gap is larger than in setting A: Robust-Q-FTRL needs 73–223× more samples than
+  plug-in at $\varepsilon = 0.1$. Extrapolated crossover: $n \approx 14$ ($\varepsilon = 0.1$),
+  $n \approx 16$ ($\varepsilon = 0.05$).
+
+Runtimes dropped sharply compared with 14 Nov (32 min instead of 5 h 12 min for a comparable
+sweep, Python 3.14 and numpy 2.5): one plug-in run at $n = 8$ takes 2.8 s instead of 15.5 s.
+
+### 3.10 Solver floor versus $c_\alpha$ (20 Nov)
+
+New script `experiments/c_alpha_solver_floor.py` (config `c_alpha_floor.yaml`, 3 tests):
+`solve_exact` on the true model for $c_\alpha \in \lbrace 0.5, 1, 4, 24 \rbrace$ and
+$K \in \lbrace 1000, \dots, 32000 \rbrace$, F1 setting A, $n = 3$, 10 instances. Results in
+`results/c_alpha_floor/20261120-082743`, details in
+[docs/4_experiments/c_alpha_floor.md](docs/4_experiments/c_alpha_floor.md).
+
+- Mean floor at $K = 1000$: 0.027 ($c_\alpha = 0.5$), 0.039 (1), 0.080 (4), 0.145 (24). At
+  $K = 32000$: 0.002, 0.003, 0.007, 0.029.
+- With $c_\alpha = 24$, $\varepsilon = 0.05$ needs $K \ge 16000$ on every instance, 8× our grid
+  maximum; this extends the table of Section 1.8.
+- The explanation in Section 1.8 ("early plans keep a large weight") does not hold: for
+  $c_\alpha = 24$ the first half of the iterations gets weight below $10^{-40}$. The mixture instead
+  averages over few late plans (13 effective plans at $K = 1000$ versus 269 for $c_\alpha = 1$)
+  with a small step size ($\eta_K = 4.0$ versus 18.3).
 
 ---
 
