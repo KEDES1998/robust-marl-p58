@@ -100,7 +100,7 @@ Instances (of 10) already solved by the uniform policy (Robust-Q-FTRL with K = 1
 
 For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
 
-### N_all(ε), setting B (main)
+### N_all(ε), setting B
 
 Geometric mean over 10 instances, typical (median) budget in brackets. All instances were
 solved by both methods at both ε. Rows in *italics* are in the trivial range.
@@ -133,19 +133,73 @@ All Robust-Q-FTRL budgets at the median have N = 1 except n = 2, ε = 0.05.
 
 For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
 
-### Growth-rate fits on the informative range
+### Growth rates
 
-Fits on the geometric means. Semi-log: factor per extra agent (2 = exponential in n with A = 2).
-Log-log: exponent of n (1 = linear).
+The cost of each method splits into a fixed structural part and a per-agent budget:
 
-| Setting, ε, range | plug-in: factor per agent | Robust-Q-FTRL: log-log exponent |
-|---|---|---|
-| A, 0.1, n = 2–4 | ×2.38 | 1.09 |
-| B, 0.1, n = 2–6 | ×1.67 | 1.14 |
-| B, 0.05, n = 2–7 | ×1.65 | 1.57 |
+```
+plug-in        N_all = 9 · 2ⁿ · m       structural part 2ⁿ: exponential, ×2 per agent
+Robust-Q-FTRL  N_all = 18 · n · K · N   structural part n: linear, log-log exponent 1
+```
 
-Fits over all n (as printed by `analyze_scaling.py`) are meaningless for Robust-Q-FTRL
-because of the trivial range (slopes −1.2 or below, except B at ε = 0.05: −0.11).
+If the budget needed (m, or K·N) stays constant in n, plug-in grows exactly ×2 per agent and
+Robust-Q-FTRL exactly linearly. Any deviation comes from the budget drifting with n.
+
+**Fits.** Least squares on the geometric means of N_all over the 10 instances, informative range
+only (no instance solved at K = 1). Each method is fitted both ways:
+
+- *factor per agent*: semi-log fit log₂ N_all = a + b·n, reported as 2ᵇ (2.0 = pure exponential);
+- *log-log exponent*: log N_all = a + c·log n (1.0 = linear in n).
+
+| Setting | ε | Range | Plug-in: factor per agent | Plug-in: log-log exponent | Robust-Q-FTRL: factor per agent | Robust-Q-FTRL: log-log exponent |
+|---|---|---|---|---|---|---|
+| A | 0.1 | n = 2–4 | **×2.38** | 2.51 | ×1.46 | **1.09** |
+| A | 0.05 | n = 2–6 | **×1.96** | 2.44 | ×1.41 | **1.22** |
+| B | 0.1 | n = 2–6 | **×1.67** | 1.85 | ×1.35 | **1.14** |
+| B | 0.05 | n = 2–7 | **×1.65** | 2.01 | ×1.49 | **1.57** |
+
+Bold is the model each method is expected to follow. The two model types can't be fully
+separated on 3–6 points, so read the columns together. Plug-in's log-log exponents (1.85–2.51)
+are far above 1, and Robust-Q-FTRL's factors per agent (×1.35–1.49) are far below 2.
+
+**Total growth over the informative range**, compared with a constant budget:
+
+| Setting | ε | Range | Plug-in | Pure ×2 per agent | Robust-Q-FTRL | Pure linear (n_max / 2) |
+|---|---|---|---|---|---|---|
+| A | 0.1 | n = 2–4 | ×5.7 | ×4 | ×2.1 | ×2 |
+| A | 0.05 | n = 2–6 | ×14.9 | ×16 | ×3.0 | ×3 |
+| B | 0.1 | n = 2–6 | ×8.6 | ×16 | ×3.4 | ×3 |
+| B | 0.05 | n = 2–7 | ×12.1 | ×32 | ×5.7 | ×3.5 |
+
+**Budget drift** (median budget per instance across the informative range):
+
+| Setting | ε | Plug-in m | Robust-Q-FTRL K (N = 1) |
+|---|---|---|---|
+| A | 0.1 | 8 for every n | 256 for every n |
+| A | 0.05 | 32 → 16 (alternating) | 1024 (n = 2–4) → 2048 (n = 5–6) |
+| B | 0.1 | 4 → 1 | 256 (n = 2) → 512 (n = 3–6) |
+| B | 0.05 | 8 → 2 | 1024 (n = 2–3) → 2048 (n = 4–7) |
+
+**Reading, per case:**
+
+- **A, ε = 0.1:** the textbook case. Both budgets are constant, so plug-in doubles per agent
+  (×2.38, slightly above 2 from instance spread) and Robust-Q-FTRL is linear (exponent 1.09).
+- **A, ε = 0.05:** plug-in is again ≈ ×2 per agent (×1.96). Robust-Q-FTRL is close to linear
+  (1.22); K doubles once (at n = 5), which adds the extra growth.
+- **B, ε = 0.1:** plug-in's m falls from 4 to 1 as n grows (peaked transitions make one sample
+  per joint action enough), so its fitted factor drops to ×1.67. It cannot go lower: at m = 1
+  it is the floor 9·2ⁿ and doubles exactly from there (median n = 6 → 9: 576 → 4,608, ×2 per agent).
+  Robust-Q-FTRL is linear (1.14) with K = 512 from n = 3 on.
+- **B, ε = 0.05:** the least clean case for both. Plug-in's m falls from 8 to 2 (×1.65 per agent).
+  Robust-Q-FTRL's exponent 1.57 comes from the single step K = 1024 → 2048 between n = 3 and 4,
+  and from a few instances needing N = 4 at n = 6. With K = 2048 fixed (n = 4–7) its N_all
+  grows ×2.8 for ×1.75 more agents.
+
+**Conclusion.** In all four cases Robust-Q-FTRL's growth is close to linear in n (exponent
+1.1–1.6) with a per-agent budget that changes at most by one doubling of K. Plug-in grows by
+×1.65–2.4 per agent. Where its m is constant (setting A) that is the full ×2 of the 2ⁿ term.
+Where m falls (setting B) the fitted rate is lower, but the cost is bounded below by 9·2ⁿ.
+Robust-Q-FTRL's absolute cost is still higher in every informative case (see the N_all tables).
 
 ### What the numbers show
 
