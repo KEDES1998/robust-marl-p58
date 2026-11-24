@@ -142,6 +142,29 @@ In every panel plug-in (dark) rises as a straight line on the log scale, while R
 (blue) rises more slowly and stays above it in the informative range. In the shaded region
 Robust-Q-FTRL drops to the cost of the uniform policy, which is not learning.
 
+### Samples per agent and own action
+
+On 3–6 values of n a power law and an exponential are hard to tell apart. A more direct test divides every method's N_all by the same factor H·S·A·n, giving the samples
+per agent and own action. A flat line then means linear growth in n, a rising line faster
+growth. Because N_all = H·S·n·A·K·N for Robust-Q-FTRL and H·S·Aⁿ·m for plug-in, this quantity
+is exactly K·N for Robust-Q-FTRL and A^(n−1)·m / n for plug-in, which rises even at constant m.
+Geometric mean over the 10 games with 95 % bootstrap CI; small dots are the individual games;
+log₂ axis:
+
+| | ε = 0.1 | ε = 0.05 |
+|---|---|---|
+| **Setting A** (β = 1, w = 0.5) | ![Samples per agent, setting A, ε = 0.1](../../results/scaling_n/20261119-202618/budget_f1_eps0.1.png) | ![Samples per agent, setting A, ε = 0.05](../../results/scaling_n/20261119-202618/budget_f1_eps0.05.png) |
+| **Setting B** (β = 0.1, w = 0) | ![Samples per agent, setting B, ε = 0.1](../../results/scaling_n/20261119-213140/budget_f1_eps0.1.png) | ![Samples per agent, setting B, ε = 0.05](../../results/scaling_n/20261119-213140/budget_f1_eps0.05.png) |
+
+- **Robust-Q-FTRL is flat** over the informative range in all four cases, within about one
+  doubling of K·N (A, ε = 0.1: ≈ 256–512; B, ε = 0.1: ≈ 512; ε = 0.05: ≈ 1024–2048). Its total
+  cost is linear in n.
+- **Plug-in rises** in all four cases, by about 2.8–5× over the informative range and further
+  beyond it: faster than linear. In A its m stays constant, so the rise is the full 2ⁿ⁻¹ / n.
+  In B its m falls from ≈ 4 to 1, which flattens the rise at small n; once m = 1 it follows
+  2ⁿ⁻¹ / n exactly (n = 7–9).
+- In the shaded region Robust-Q-FTRL drops to K·N = 1 (uniform policy), as in the plots above.
+
 ### Growth rates
 
 The cost of each method splits into a fixed structural part and a per-agent budget:

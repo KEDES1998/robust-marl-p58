@@ -55,6 +55,8 @@ def n_all_table(df: pd.DataFrame, eps: float, success_rate: float) -> pd.DataFra
         sub = df[df["method"] == method]
         if sub.empty:
             continue
+        hsa = sub.groupby("n")[["H", "S", "A"]].first()
+        unit = hsa["H"] * hsa["S"] * hsa["A"]                     # H·S·A per n
         share = (
             sub.assign(ok=sub["gap_out"] <= eps)
             .groupby(["n", "instance_seed", *keys])
@@ -68,6 +70,9 @@ def n_all_table(df: pd.DataFrame, eps: float, success_rate: float) -> pd.DataFra
                 "method": method, "n": n, "instance_seed": inst,
                 "N_all": float(best["n_samples"]) if best is not None else np.nan,
                 "budget": ", ".join(f"{k}={int(best[k])}" for k in keys) if best is not None else "",
+                # Samples per agent and own action, the same normalisation for every method:
+                # Robust-Q-FTRL (H·S·n·A·K·N) gives K·N, plug-in (H·S·Aⁿ·m) gives A^(n-1)·m / n.
+                "per_agent": float(best["n_samples"]) / (unit.loc[n] * n) if best is not None else np.nan,
                 # K = 1 learns nothing (output = uniform policy): such an instance is trivial.
                 "trivial": best is not None and "K" in keys and int(best["K"]) == 1,
             })
@@ -320,12 +325,97 @@ def plot(
     plt.close(fig)
 
 
+UNIT_LABEL = {
+    "plugin": r"plug-in $= A^{n-1} m\,/\,n$",
+    "robust_q_ftrl": r"Robust-Q-FTRL $= K \cdot N$",
+}
+
+
+def plot_budget(
+    table: pd.DataFrame, summary: pd.DataFrame, eps: float, path: Path, methods: list[str] | None = None,
+    trivial_from: float | None = None, n_boot: int = 2000, seed: int = 0,
+) -> None:
+    """Samples per agent and own action, ``N_all / (H·S·A·n)``, against n, for every method.
+
+    Every method is divided by the same factor, so a flat line means the total cost is linear
+    in n and a rising line means faster than linear. Robust-Q-FTRL (``N_all = H·S·n·A·K·N``)
+    gives exactly K·N; plug-in (``N_all = H·S·Aⁿ·m``) gives ``A^(n-1)·m / n``, which rises even
+    at constant m. Points: geometric mean over the games with a 95 % bootstrap CI; small dots:
+    the individual games. Log₂ y axis.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FixedLocator, NullLocator
+
+    rng = np.random.default_rng(seed)
+    methods = [m for m in (methods or BUDGET) if m in set(table["method"])]
+    ns = sorted(table["n"].unique())
+    start = trivial_from if trivial_from is not None else trivial_start(summary)
+
+    plt.rcParams.update({"font.family": "sans-serif", "font.size": 15, "mathtext.fontset": "dejavusans"})
+    fig, ax = plt.subplots(figsize=(7.75, 6.6))
+    fig.patch.set_facecolor(BACKGROUND)
+    ax.set_facecolor(BACKGROUND)
+    if start is not None:
+        ax.axvspan(start - 0.5, ns[-1] + 0.4, color=SHADE, zorder=0, lw=0)
+        narrow = ns[-1] + 0.4 - (start - 0.5) < 2.5
+        ax.text((start - 0.5 + ns[-1] + 0.4) / 2, 1.01, "F1 (partly) trivial", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", color=SHADE_TEXT, fontsize=12 if narrow else 14, zorder=1)
+
+    offsets = {m: (i - (len(methods) - 1) / 2) * 0.12 for i, m in enumerate(methods)}
+    all_vals = []
+    for method in methods:
+        color = COLORS.get(method, INK)
+        rows = []
+        for n, g in table[table["method"] == method].groupby("n"):
+            vals = g["per_agent"].dropna().to_numpy()
+            if len(vals):
+                all_vals.extend(vals)
+                jitter = rng.uniform(-0.07, 0.07, len(vals))
+                ax.scatter(n + offsets[method] + jitter, vals, s=14, color=color, alpha=0.25, lw=0, zorder=2)
+                rows.append((n, *geo_mean_ci(vals, n_boot, rng)))
+        if not rows:
+            continue
+        n_arr, gmean, lo, hi = map(np.array, zip(*rows))
+        ax.errorbar(n_arr + offsets[method], gmean, yerr=[gmean - lo, hi - gmean], color=color, lw=2.2, marker="o",
+                    ms=10, capsize=5, elinewidth=1.3, capthick=1.3, zorder=3, label=UNIT_LABEL.get(method, method))
+
+    ax.set_yscale("log", base=2)
+    bot = int(np.floor(np.log2(min(all_vals)))) if all_vals else 0
+    top = int(np.ceil(np.log2(max(all_vals)))) if all_vals else 1
+    ks = list(range(bot, top + 1))
+    ax.yaxis.set_major_locator(FixedLocator([2.0**k for k in ks]))
+    ax.yaxis.set_minor_locator(NullLocator())
+    ax.set_yticklabels([f"{2.0**k:g}" for k in ks])
+    ax.set_ylim(2.0 ** (bot - 0.5), 2.0 ** (top + 0.5))
+    ax.set_xticks(ns)
+    ax.set_xlim(ns[0] - 0.4, ns[-1] + 0.4)
+    ax.set_xlabel("number of agents $n$", labelpad=10, fontsize=16)
+    ax.set_ylabel(rf"$N_{{\mathrm{{all}}}}(\varepsilon = {eps:g})\,/\,(H S A\, n)$", labelpad=8, fontsize=17)
+    ax.grid(True, which="major", color=GRID, lw=1.0, zorder=1)
+    ax.tick_params(colors=INK, which="both", length=0, pad=8)
+    ax.tick_params(axis="x", length=8, color=GRID, direction="inout")
+    for side, spine in ax.spines.items():
+        spine.set_color(INK if side in ("left", "bottom") else GRID)
+        spine.set_linewidth(1.2 if side in ("left", "bottom") else 0.8)
+    for label in (ax.xaxis.label, ax.yaxis.label):
+        label.set_color(INK)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.17), ncol=2, frameon=False, labelcolor=INK,
+              handlelength=2.6, fontsize=13, columnspacing=2.5)
+    fig.tight_layout()
+    fig.savefig(path, dpi=200, facecolor=BACKGROUND, bbox_inches="tight", pad_inches=0.25)
+    plt.close(fig)
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv", nargs="+", type=Path)
     ap.add_argument("--eps", type=float, default=0.1)
     ap.add_argument("--success-rate", type=float, default=0.9)
     ap.add_argument("--plot", type=Path, default=None)
+    ap.add_argument("--budget-plot", type=Path, default=None,
+                    help="plot N_all / (H·S·A·n), samples per agent and own action, per n; flat = linear in n")
     ap.add_argument("--methods", nargs="+", choices=list(BUDGET), help="methods to plot (default: all in the CSVs)")
     ap.add_argument("--fit-n", nargs="+", type=int, help="n used for the dashed fit (default: all n below the trivial region)")
     ap.add_argument("--trivial-from", type=float,
@@ -359,6 +449,10 @@ def main(argv: list[str] | None = None) -> None:
         plot(table, summary, args.eps, args.plot, methods=args.methods, fit_n=args.fit_n,
              trivial_from=args.trivial_from, n_boot=args.boot)
         print(f"\nplot: {args.plot}")
+    if args.budget_plot:
+        plot_budget(table, summary, args.eps, args.budget_plot, methods=args.methods,
+                    trivial_from=args.trivial_from, n_boot=args.boot)
+        print(f"budget plot: {args.budget_plot}")
 
 
 if __name__ == "__main__":

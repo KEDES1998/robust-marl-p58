@@ -79,6 +79,7 @@ Main experiments (details and results in [docs/](docs/README.md)):
 |---|---|---|
 | C1, scaling in n (n = 2–9, all methods) | `uv run python experiments/run_scaling.py experiments/configs/scaling_n.yaml --workers 8` | `results/scaling_n/` |
 | N_all(ε), fits and plot | `uv run python experiments/analyze_scaling.py results/scaling_n/<ts>/runs.csv --eps 0.1 --plot n_all_f1_eps0.1.png` | printed |
+| Samples per agent and action, N_all / (H·S·A·n) | `uv run python experiments/analyze_scaling.py results/scaling_n/<ts>/runs.csv --eps 0.1 --budget-plot budget_f1_eps0.1.png` | plot |
 | F1 triviality (uniform policy) | `uv run python experiments/f1_triviality.py experiments/configs/scaling_n.yaml` | printed |
 | Solver floor versus c_α and K | `uv run python experiments/c_alpha_solver_floor.py experiments/configs/c_alpha_floor.yaml --workers 8 --plot` | `results/c_alpha_floor/` |
 
