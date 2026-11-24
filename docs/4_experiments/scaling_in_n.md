@@ -118,28 +118,20 @@ solved by both methods at both ε. Rows in *italics* are in the trivial range.
 
 All Robust-Q-FTRL budgets at the median have N = 1 except n = 2, ε = 0.05.
 
-### N_all(ε), setting A
-
-| n | plug-in, ε = 0.1 | Robust-Q-FTRL, ε = 0.1 | plug-in, ε = 0.05 | Robust-Q-FTRL, ε = 0.05 |
-|---|---|---|---|---|
-| 2 | 177 (m = 8) | 12,161 (K = 256) | 709 (m = 32) | 59,886 (K = 1024) |
-| 3 | 501 (m = 8) | 18,241 (K = 256) | 1,871 (m = 32) | 63,518 (K = 1024) |
-| 4 | 1,003 (m = 8) | 26,067 (K = 256) | 2,469 (m = 16) | 104,267 (K = 1024) |
-| 5 | *1,746 (m = 8)* | *2,036 (3 of 10 at K = 1)* | 6,984 (m = 32) | 211,728 (K = 2048) |
-| 6 | *3,743 (m = 8)* | *153 (9 of 10 at K = 1)* | 10,586 (m = 16) | 179,657 (K = 2048) |
-| 7 | *7,486 (m = 8)* | *126 (all at K = 1)* | *22,692 (m = 16)* | *74,105 (1 of 10 at K = 1)* |
-| 8 | *9,216 (m = 4)* | *144 (all at K = 1)* | *17,198 (m = 8)* | *269 (9 of 10 at K = 1)* |
-| 9 | *7,486 (m = 2)* | *162 (all at K = 1)* | *14,971 (m = 4)* | *162 (all at K = 1)* |
-
-For n = 2–8 these are identical to the earlier sweeps of 8, 14 and 19 Nov.
-
 ### Plots
 
-N_all(ε) against n on a log scale. Points are the arithmetic mean over the 10 instances, with
-a 95 % bootstrap interval (instances resampled). They are somewhat higher than the geometric
-means in the tables, most visibly where a few instances need a much larger budget. The dashed
-lines are semi-log fits on the informative range. The shaded region starts at the first n where
-any instance is already solved at K = 1, the rows in *italics* in the tables.
+N_all(ε) against n on a log scale. Points are the geometric mean over the 10 instances (the
+same numbers as in the tables), with a 95 % bootstrap interval (instances resampled). The dashed
+lines are each method's expected growth model, fitted on the geometric means of the informative
+range (the same fits as in the growth-rate table below):
+
+- **plug-in:** exponential, N_all ∝ bⁿ. On the log axis this is a straight line.
+- **Robust-Q-FTRL:** power law, N_all ∝ n^c. On the log axis this bends over and flattens,
+  which is what linear growth looks like there; an exponential would be a straight line.
+
+The legend gives the fitted b and c. The shaded region starts at the first n where any instance
+is already solved at K = 1, the rows in *italics* in the tables; dashed lines inside it are
+extrapolations.
 
 | | ε = 0.1 | ε = 0.05 |
 |---|---|---|
